@@ -1205,7 +1205,7 @@ while running:
         pg.draw.rect(full_surface, (100, 100, 150), btn_auto_rect) 
         full_surface.blit(text_auto, text_auto_rect)
         # --------------------------------------
-        pg.draw.rect(full_surface, (90, 120, 160), btn_check_updates_rect)
+        pg.draw.rect(full_surface, (100, 150, 100), btn_check_updates_rect)
         full_surface.blit(text_check_updates, text_check_updates_rect)
         full_surface.blit(settings_version_text, settings_version_rect)
 

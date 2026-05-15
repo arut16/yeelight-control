@@ -991,7 +991,6 @@ while running:
                         if update_files:
                             show_update_modal = True
                         else:
-                            show_settings_modal = False
                             show_center_popup("Aucune mise à jour")
                     except Exception as e:
                         logging.error(f"Erreur vérification mises à jour: {e}")

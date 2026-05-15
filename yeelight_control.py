@@ -50,6 +50,8 @@ SCREENSAVERS_SET_FILE = '/home/arut16/screensavers_set.json'
 AUTOMATIONS_FILE = '/home/arut16/automations.json'
 AUTOMATIONS_SCRIPT = '/home/arut16/automatisations_v12.py' # Interface V12
 CPU_BUBBLE_SCRIPT = '/home/arut16/cpu_temp_bubble.py'
+PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+VERSION_FILE = os.path.join(PROJECT_DIR, 'VERSION')
 
 # Scripts
 UPDATE_LAMP_IPS_SCRIPT = "/home/arut16/update_lamp_ips.py"
@@ -100,6 +102,64 @@ def save_screensaver_settings(settings):
 
 screensaver_settings = load_screensaver_settings()
 
+def load_project_version():
+    try:
+        with open(VERSION_FILE, 'r', encoding='utf-8') as f:
+            version = f.read().strip()
+            return version if version else '1.0'
+    except Exception as e:
+        logging.error(f"Erreur lecture version projet: {e}")
+        return '1.0'
+
+def run_git_command(args):
+    completed = subprocess.run(
+        ['git', *args],
+        cwd=PROJECT_DIR,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False
+    )
+    if completed.returncode != 0:
+        message = completed.stderr.strip() or completed.stdout.strip() or 'commande git échouée'
+        raise RuntimeError(message)
+    return completed.stdout.strip()
+
+def get_project_updates():
+    run_git_command(['rev-parse', '--is-inside-work-tree'])
+    run_git_command(['fetch', '--prune', '--quiet'])
+    try:
+        upstream_ref = run_git_command(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'])
+    except RuntimeError:
+        remotes = run_git_command(['remote']).splitlines()
+        current_branch = run_git_command(['branch', '--show-current'])
+        if not remotes or not current_branch:
+            raise RuntimeError('aucune branche distante configurée')
+        upstream_ref = f"{remotes[0]}/{current_branch}"
+    output = run_git_command(['diff', '--name-only', f'HEAD..{upstream_ref}'])
+    return [line for line in output.splitlines() if line.strip()]
+
+def apply_project_updates():
+    run_git_command(['pull', '--ff-only'])
+
+def restart_project_processes():
+    try:
+        subprocess.run(['pkill', '-f', 'cpu_temp_bubble.py'], stderr=subprocess.DEVNULL)
+    except Exception as e:
+        logging.error(f"Erreur arrêt cpu bubble avant redémarrage: {e}")
+    try:
+        subprocess.Popen(['python3', CPU_BUBBLE_SCRIPT], stderr=subprocess.DEVNULL)
+    except Exception as e:
+        logging.error(f"Erreur redémarrage cpu bubble: {e}")
+    try:
+        pg.quit()
+    except Exception as e:
+        logging.error(f"Erreur fermeture pygame avant redémarrage: {e}")
+    python_executable = sys.executable or 'python3'
+    os.execvp(python_executable, [python_executable, os.path.abspath(__file__)])
+
+PROJECT_VERSION = load_project_version()
+
 def load_lamp_ips():
     try:
         with open(LAMP_IPS_FILE, 'r') as f:
@@ -143,6 +203,8 @@ CLOSE_BUTTON_SIZE = 40
 SETTINGS_BUTTON_SIZE = 40
 CONFIRM_WIDTH, CONFIRM_HEIGHT = 350, 120
 CONFIG_SAVED_WIDTH, CONFIG_SAVED_HEIGHT = 200, 100
+UPDATE_MODAL_WIDTH, UPDATE_MODAL_HEIGHT = 500, 280
+UPDATE_BTN_WIDTH, UPDATE_BTN_HEIGHT = 150, 40
 
 # Fenêtre Paramètres
 SETTINGS_MODAL_WIDTH, SETTINGS_MODAL_HEIGHT = 550, 400 
@@ -181,6 +243,9 @@ fade_start_time = 0
 last_activity = time.time()
 show_confirm = False
 show_settings_modal = False
+show_update_modal = False
+update_files = []
+updating_project = False
 editing_config = False
 config_saved = False
 config_process = None
@@ -324,6 +389,25 @@ text_edit_config_rect = text_edit_config.get_rect(center=btn_edit_config_rect.ce
 btn_auto_rect = pg.Rect(settings_modal_rect.x + 20, settings_modal_rect.y + 240, SETTINGS_BTN_WIDTH, SETTINGS_BTN_HEIGHT)
 text_auto = small_font.render("Automatisations", True, (255, 255, 255))
 text_auto_rect = text_auto.get_rect(center=btn_auto_rect.center)
+
+btn_check_updates_rect = pg.Rect(settings_modal_rect.x + 20, settings_modal_rect.y + 305, SETTINGS_BTN_WIDTH, 45)
+text_check_updates = small_font.render("Vérifier mises à jour", True, (255, 255, 255))
+text_check_updates_rect = text_check_updates.get_rect(center=btn_check_updates_rect.center)
+settings_version_text = preview_font.render(f"Version {PROJECT_VERSION}", True, (220, 220, 220))
+settings_version_rect = settings_version_text.get_rect(bottomleft=(settings_modal_rect.x + 12, settings_modal_rect.bottom - 10))
+
+# Fenêtre MAJ projet
+update_modal_rect = pg.Rect((SCREEN_WIDTH - UPDATE_MODAL_WIDTH) // 2, (SCREEN_HEIGHT - UPDATE_MODAL_HEIGHT) // 2, UPDATE_MODAL_WIDTH, UPDATE_MODAL_HEIGHT)
+update_title_text = font.render("Mises à jour disponibles", True, (255, 255, 255))
+update_title_rect = update_title_text.get_rect(center=(update_modal_rect.centerx, update_modal_rect.y + 30))
+update_info_text = small_font.render("Fichiers à mettre à jour :", True, (255, 255, 255))
+update_info_rect = update_info_text.get_rect(topleft=(update_modal_rect.x + 25, update_modal_rect.y + 65))
+btn_apply_update_rect = pg.Rect(update_modal_rect.x + 90, update_modal_rect.bottom - 60, UPDATE_BTN_WIDTH, UPDATE_BTN_HEIGHT)
+btn_cancel_update_rect = pg.Rect(update_modal_rect.x + 260, update_modal_rect.bottom - 60, UPDATE_BTN_WIDTH, UPDATE_BTN_HEIGHT)
+text_apply_update = small_font.render("Mettre à jour", True, (255, 255, 255))
+text_apply_update_rect = text_apply_update.get_rect(center=btn_apply_update_rect.center)
+text_cancel_update = small_font.render("Annuler", True, (255, 255, 255))
+text_cancel_update_rect = text_cancel_update.get_rect(center=btn_cancel_update_rect.center)
 
 # Positionnement Checkboxes et Boutons Aperçu
 check_start_x = settings_modal_rect.x + 270
@@ -720,6 +804,35 @@ def draw_popup_messages(surface):
         else: to_remove.append(nom)
     for nom in to_remove: del popup_messages[nom]
 
+def show_center_popup(message):
+    popup_text = popup_font.render(message, True, (0, 0, 0))
+    popup_rect = pg.Rect(0, 0, popup_text.get_width() + 10, popup_text.get_height() + 10)
+    popup_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+    popup_messages[f"popup_{time.time()}"] = {"start_time": time.time(), "rect": popup_rect, "text": popup_text}
+
+def draw_update_modal(surface):
+    overlay = pg.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pg.SRCALPHA)
+    overlay.fill((0, 0, 0, 210))
+    surface.blit(overlay, (0, 0))
+    pg.draw.rect(surface, (70, 70, 70), update_modal_rect)
+    pg.draw.rect(surface, (220, 220, 220), update_modal_rect, 2)
+    surface.blit(update_title_text, update_title_rect)
+    surface.blit(update_info_text, update_info_rect)
+
+    max_visible_files = 7
+    visible_files = update_files[:max_visible_files]
+    for index, filename in enumerate(visible_files):
+        file_text = checkbox_font.render(f"• {filename}", True, (230, 230, 230))
+        surface.blit(file_text, (update_modal_rect.x + 40, update_modal_rect.y + 100 + (index * 22)))
+    if len(update_files) > max_visible_files:
+        more_text = checkbox_font.render(f"… et {len(update_files) - max_visible_files} autre(s) fichier(s)", True, (230, 230, 230))
+        surface.blit(more_text, (update_modal_rect.x + 40, update_modal_rect.y + 100 + (max_visible_files * 22)))
+
+    pg.draw.rect(surface, (0, 150, 0), btn_apply_update_rect)
+    surface.blit(text_apply_update, text_apply_update_rect)
+    pg.draw.rect(surface, (180, 0, 0), btn_cancel_update_rect)
+    surface.blit(text_cancel_update, text_cancel_update_rect)
+
 def draw_checkbox(surface, rect, is_checked, text_surface):
     pg.draw.rect(surface, (255, 255, 255), rect, 2)
     if is_checked:
@@ -819,6 +932,20 @@ while running:
                 stop_preview()
             
             elif screensaver_active: stop_screensaver()
+            elif show_update_modal:
+                if btn_apply_update_rect.collidepoint(pos):
+                    updating_project = True
+                    try:
+                        apply_project_updates()
+                        restart_project_processes()
+                    except Exception as e:
+                        updating_project = False
+                        show_update_modal = False
+                        logging.error(f"Erreur mise à jour projet: {e}")
+                        show_center_popup("Erreur mise à jour")
+                elif btn_cancel_update_rect.collidepoint(pos) or not update_modal_rect.collidepoint(pos):
+                    show_update_modal = False
+                    update_files = []
             elif show_confirm:
                 if yes_button_rect.collidepoint(pos): stop_screensaver(); running = False
                 elif no_button_rect.collidepoint(pos): show_confirm = False
@@ -857,6 +984,19 @@ while running:
                             editing_config = True 
                         except Exception as e: logger.error(f"Erreur lancement auto script: {e}")
                 # ---------------------------------
+
+                elif btn_check_updates_rect.collidepoint(pos):
+                    try:
+                        update_files = get_project_updates()
+                        if update_files:
+                            show_update_modal = True
+                        else:
+                            show_settings_modal = False
+                            show_center_popup("Aucune mise à jour")
+                    except Exception as e:
+                        logging.error(f"Erreur vérification mises à jour: {e}")
+                        show_settings_modal = False
+                        show_center_popup("Erreur vérification MAJ")
 
                 elif check_matrix_rect.collidepoint(pos):
                     screensaver_settings["matrix"] = not screensaver_settings["matrix"]
@@ -939,7 +1079,7 @@ while running:
             on_button_click(nom, last_click_pos[nom], "toggle")
             click_count[nom] = 0
 
-    if not screensaver_active and not fading and is_fullscreen and not show_settings_modal and (time.time() - last_activity) * 1000 >= INACTIVITY_TIMEOUT:
+    if not screensaver_active and not fading and is_fullscreen and not show_settings_modal and not show_update_modal and (time.time() - last_activity) * 1000 >= INACTIVITY_TIMEOUT:
         available_sa = []
         if screensaver_settings["stars"]: available_sa.append(0)
         if screensaver_settings["matrix"]: available_sa.append(1)
@@ -979,7 +1119,7 @@ while running:
         continue 
 
     if not screensaver_active and not fading:
-        if not ripple_active and not button_expand_active and not popup_messages and not show_confirm and not show_settings_modal:
+        if not ripple_active and not button_expand_active and not popup_messages and not show_confirm and not show_settings_modal and not show_update_modal:
             target_fps = IDLE_FPS
         for nom, btn in boutons.items():
             if lampe_states[nom] != "on":
@@ -1065,6 +1205,9 @@ while running:
         pg.draw.rect(full_surface, (100, 100, 150), btn_auto_rect) 
         full_surface.blit(text_auto, text_auto_rect)
         # --------------------------------------
+        pg.draw.rect(full_surface, (90, 120, 160), btn_check_updates_rect)
+        full_surface.blit(text_check_updates, text_check_updates_rect)
+        full_surface.blit(settings_version_text, settings_version_rect)
 
         draw_checkbox(full_surface, check_matrix_rect, screensaver_settings["matrix"], text_matrix)
         draw_checkbox(full_surface, check_stars_rect, screensaver_settings["stars"], text_stars)
@@ -1079,6 +1222,9 @@ while running:
         draw_preview_button(full_surface, preview_particles_rect)
         draw_preview_button(full_surface, preview_nebula_rect)
         draw_preview_button(full_surface, preview_turbulence_rect)
+
+    if show_update_modal and is_fullscreen and not screensaver_active:
+        draw_update_modal(full_surface)
 
     if is_fullscreen: screen.blit(full_surface, (0, 0))
     else: screen.blit(full_surface.subsurface(back_button_rect), (0, 0))

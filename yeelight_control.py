@@ -125,19 +125,35 @@ def run_git_command(args):
         raise RuntimeError(message)
     return completed.stdout.strip()
 
-def get_project_updates():
-    run_git_command(['rev-parse', '--is-inside-work-tree'])
-    run_git_command(['fetch', '--prune', '--quiet'])
+def get_upstream_ref():
     try:
-        upstream_ref = run_git_command(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'])
+        return run_git_command(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'])
     except RuntimeError:
         remotes = run_git_command(['remote']).splitlines()
         current_branch = run_git_command(['branch', '--show-current'])
         if not remotes or not current_branch:
             raise RuntimeError('aucune branche distante configurée')
-        upstream_ref = f"{remotes[0]}/{current_branch}"
+        return f"{remotes[0]}/{current_branch}"
+
+def get_project_version_from_ref(ref):
+    try:
+        version = run_git_command(['show', f'{ref}:VERSION']).strip()
+        return version or None
+    except RuntimeError as e:
+        logging.error(f"Erreur lecture version distante: {e}")
+        return None
+
+def get_project_update_info():
+    run_git_command(['rev-parse', '--is-inside-work-tree'])
+    run_git_command(['fetch', '--prune', '--quiet'])
+    upstream_ref = get_upstream_ref()
     output = run_git_command(['diff', '--name-only', f'HEAD..{upstream_ref}'])
-    return [line for line in output.splitlines() if line.strip()]
+    update_files = [line for line in output.splitlines() if line.strip()]
+    return update_files, get_project_version_from_ref(upstream_ref)
+
+def get_project_updates():
+    update_files, _ = get_project_update_info()
+    return update_files
 
 def apply_project_updates():
     run_git_command(['pull', '--ff-only'])
@@ -245,6 +261,7 @@ show_confirm = False
 show_settings_modal = False
 show_update_modal = False
 update_files = []
+update_version = None
 updating_project = False
 editing_config = False
 config_saved = False
@@ -309,6 +326,7 @@ settings_icon = pg.transform.scale(settings_icon, (SETTINGS_BUTTON_SIZE, SETTING
 font = pg.font.SysFont("Arial", 28, bold=True)
 small_font = pg.font.SysFont("Arial", 18, bold=True)
 popup_font = pg.font.SysFont("Arial", 12, bold=True)
+center_popup_font = pg.font.SysFont("Arial", 24, bold=True)
 checkbox_font = pg.font.SysFont("Arial", 20, bold=False)
 preview_font = pg.font.SysFont("Arial", 12, bold=True) 
 matrix_font = pg.font.Font('/home/arut16/font/ms mincho.ttf', MATRIX_FONT_SIZE)
@@ -401,7 +419,7 @@ update_modal_rect = pg.Rect((SCREEN_WIDTH - UPDATE_MODAL_WIDTH) // 2, (SCREEN_HE
 update_title_text = font.render("Mises à jour disponibles", True, (255, 255, 255))
 update_title_rect = update_title_text.get_rect(center=(update_modal_rect.centerx, update_modal_rect.y + 30))
 update_info_text = small_font.render("Fichiers à mettre à jour :", True, (255, 255, 255))
-update_info_rect = update_info_text.get_rect(topleft=(update_modal_rect.x + 25, update_modal_rect.y + 65))
+update_info_rect = update_info_text.get_rect(topleft=(update_modal_rect.x + 25, update_modal_rect.y + 85))
 btn_apply_update_rect = pg.Rect(update_modal_rect.x + 90, update_modal_rect.bottom - 60, UPDATE_BTN_WIDTH, UPDATE_BTN_HEIGHT)
 btn_cancel_update_rect = pg.Rect(update_modal_rect.x + 260, update_modal_rect.bottom - 60, UPDATE_BTN_WIDTH, UPDATE_BTN_HEIGHT)
 text_apply_update = small_font.render("Mettre à jour", True, (255, 255, 255))
@@ -804,9 +822,11 @@ def draw_popup_messages(surface):
         else: to_remove.append(nom)
     for nom in to_remove: del popup_messages[nom]
 
-def show_center_popup(message):
-    popup_text = popup_font.render(message, True, (0, 0, 0))
-    popup_rect = pg.Rect(0, 0, popup_text.get_width() + 10, popup_text.get_height() + 10)
+def show_center_popup(message, large=False):
+    font_to_use = center_popup_font if large else popup_font
+    padding = 20 if large else 10
+    popup_text = font_to_use.render(message, True, (0, 0, 0))
+    popup_rect = pg.Rect(0, 0, popup_text.get_width() + padding, popup_text.get_height() + padding)
     popup_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
     popup_messages[f"popup_{time.time()}"] = {"start_time": time.time(), "rect": popup_rect, "text": popup_text}
 
@@ -817,16 +837,20 @@ def draw_update_modal(surface):
     pg.draw.rect(surface, (70, 70, 70), update_modal_rect)
     pg.draw.rect(surface, (220, 220, 220), update_modal_rect, 2)
     surface.blit(update_title_text, update_title_rect)
+    if update_version and update_version != PROJECT_VERSION:
+        version_text = small_font.render(f"Nouvelle version {update_version}", True, (255, 230, 120))
+        version_rect = version_text.get_rect(topleft=(update_modal_rect.x + 25, update_modal_rect.y + 58))
+        surface.blit(version_text, version_rect)
     surface.blit(update_info_text, update_info_rect)
 
-    max_visible_files = 7
+    max_visible_files = 6
     visible_files = update_files[:max_visible_files]
     for index, filename in enumerate(visible_files):
         file_text = checkbox_font.render(f"• {filename}", True, (230, 230, 230))
-        surface.blit(file_text, (update_modal_rect.x + 40, update_modal_rect.y + 100 + (index * 22)))
+        surface.blit(file_text, (update_modal_rect.x + 40, update_modal_rect.y + 120 + (index * 22)))
     if len(update_files) > max_visible_files:
         more_text = checkbox_font.render(f"… et {len(update_files) - max_visible_files} autre(s) fichier(s)", True, (230, 230, 230))
-        surface.blit(more_text, (update_modal_rect.x + 40, update_modal_rect.y + 100 + (max_visible_files * 22)))
+        surface.blit(more_text, (update_modal_rect.x + 40, update_modal_rect.y + 120 + (max_visible_files * 22)))
 
     pg.draw.rect(surface, (0, 150, 0), btn_apply_update_rect)
     surface.blit(text_apply_update, text_apply_update_rect)
@@ -946,6 +970,7 @@ while running:
                 elif btn_cancel_update_rect.collidepoint(pos) or not update_modal_rect.collidepoint(pos):
                     show_update_modal = False
                     update_files = []
+                    update_version = None
             elif show_confirm:
                 if yes_button_rect.collidepoint(pos): stop_screensaver(); running = False
                 elif no_button_rect.collidepoint(pos): show_confirm = False
@@ -987,11 +1012,12 @@ while running:
 
                 elif btn_check_updates_rect.collidepoint(pos):
                     try:
-                        update_files = get_project_updates()
+                        update_files, update_version = get_project_update_info()
                         if update_files:
                             show_update_modal = True
                         else:
-                            show_center_popup("Aucune mise à jour")
+                            update_version = None
+                            show_center_popup("Aucune mise à jour", large=True)
                     except Exception as e:
                         logging.error(f"Erreur vérification mises à jour: {e}")
                         show_settings_modal = False
@@ -1159,8 +1185,6 @@ while running:
             pg.draw.line(full_surface, (255, 0, 0), (close_button_rect.right-5, close_button_rect.y+5), (close_button_rect.x+5, close_button_rect.bottom-5), 3)
             full_surface.blit(settings_icon, settings_button_rect.topleft)
 
-        draw_popup_messages(full_surface)
-
     if fading and is_fullscreen:
         fade, done = fade_to_black(fade_start_time)
         full_surface.blit(fade, (0, 0))
@@ -1224,6 +1248,8 @@ while running:
 
     if show_update_modal and is_fullscreen and not screensaver_active:
         draw_update_modal(full_surface)
+
+    draw_popup_messages(full_surface)
 
     if is_fullscreen: screen.blit(full_surface, (0, 0))
     else: screen.blit(full_surface.subsurface(back_button_rect), (0, 0))

@@ -1,10 +1,37 @@
 # Yeelight Touchscreen Home Automation Controller
 
+![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![Raspberry Pi 5](https://img.shields.io/badge/Raspberry%20Pi-5-C51A4A?logo=raspberrypi&logoColor=white)
+![Yeelight LAN Mode](https://img.shields.io/badge/Yeelight-LAN%20Mode-00A86B)
+![Pygame UI](https://img.shields.io/badge/UI-Pygame-5A4FCF)
+![Local Network Only](https://img.shields.io/badge/Network-Local%20Only-orange)
+
 A Raspberry Pi 5 touchscreen home automation controller for local Yeelight smart bulb control over a LAN. The project is written in Python and centers on `yeelight_control.py`, a fullscreen `pygame` interface designed for kiosk-style usage on a 640×480 Raspberry Pi touchscreen.
 
 The controller operates Yeelight bulbs directly on the local network through the Yeelight LAN protocol. No cloud service is required for normal Yeelight operation once the bulbs are reachable on the same LAN and LAN control is enabled in the Yeelight ecosystem.
 
 > **Target environment:** Raspberry Pi 5 + Raspberry Pi OS desktop session + touchscreen display.
+
+> [!WARNING]
+> Many runtime paths are currently hardcoded under `/home/arut16/`. Deployments on another username, home directory, or installation path require updating the scripts and local configuration paths accordingly before running the application.
+
+---
+
+## ⚡ Quick Start
+
+A minimal local setup workflow for a Raspberry Pi OS desktop session:
+
+```bash
+git clone <your-repository-url> yeelight-control
+cd yeelight-control
+python3 -m venv /home/arut16/YeelightDomEnv
+source /home/arut16/YeelightDomEnv/bin/activate
+pip install -r requirements.txt
+export DISPLAY=:0
+python3 yeelight_control.py
+```
+
+Before launching on real hardware, make sure the required local JSON files, image assets, sound assets, font file, and video files described below exist at the expected paths or update the scripts for your installation.
 
 ---
 
@@ -460,6 +487,8 @@ If `astral` is unavailable or condition evaluation fails, the code treats the co
 
 ## 🧩 Configuration Files
 
+The current configuration model is file-based and uses production paths under `/home/arut16/`. Future versions may centralize paths and runtime settings into a dedicated configuration system or `.env`-style configuration to improve portability.
+
 ### `lamp_config.json`
 
 Production path:
@@ -608,6 +637,8 @@ tail -f /home/arut16/cpu_temp_bubble.log
 │ CPU temp / Wi-Fi IP / UPS  │
 └───────────────────────────┘
 ```
+
+The architecture currently favors a direct Raspberry Pi deployment layout with local scripts, local JSON files, and hardcoded production paths. A future centralized configuration layer could make these paths easier to override per installation.
 
 ---
 
@@ -770,6 +801,17 @@ sudo ifup wlan0
 ```
 
 Make sure those commands are valid for your Raspberry Pi OS networking setup. Newer NetworkManager-based installations may require adapting this recovery logic.
+
+---
+
+## ⚠️ Known Limitations
+
+- Many paths are hardcoded under `/home/arut16/`, which requires manual updates for other users or installation directories.
+- The UI is optimized mainly for 640×480 Raspberry Pi touchscreen usage.
+- There is no authentication layer; the controller is intended for trusted local touchscreen access.
+- The application is designed for LAN environments only and expects Yeelight bulbs to be reachable locally.
+- Portability is limited without path adjustments and Raspberry Pi OS desktop-session assumptions.
+- The application depends on local image, sound, font, video, and JSON configuration assets existing at expected locations.
 
 ---
 

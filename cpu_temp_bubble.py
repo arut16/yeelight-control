@@ -38,6 +38,7 @@ UPS_POLL_INTERVAL_MS = 5000
 UPS_STATUS_CONFIRMATION_COUNT = 3
 UPS_SHUTDOWN_DELAY_SECONDS = 5
 SCHEDULE_POLL_INTERVAL_MS = 15000
+SCHEDULE_STARTUP_GRACE_SECONDS = int(os.getenv("CPU_BUBBLE_SCHEDULE_STARTUP_GRACE_SECONDS", "300"))
 MAX_SHUTDOWN_PROGRAMS = 5
 WEEKDAYS = [
     (0, "Lun"),
@@ -52,7 +53,7 @@ WEEKDAYS = [
 # ====== Mode test par variables d'environnement ======
 TEST_MODE = os.getenv("CPU_BUBBLE_TEST", "off").strip().lower()
 TEST_RESULT = os.getenv("CPU_BUBBLE_RESULT", "success").strip().lower()
-CPU_BUBBLE_BUILD = "ups-upower-direct-ui-v2-2026-05-15"
+CPU_BUBBLE_BUILD = "schedule-startup-grace-v1.0.4-2026-05-16"
 
 # ====== Logging avec rotation ======
 logger = logging.getLogger('cpu_temp_bubble')
@@ -188,6 +189,8 @@ class DraggableWindow(tk.Tk):
         self.schedule_hour_var = None
         self.schedule_minute_var = None
         self.last_schedule_fire_key = None
+        self.schedule_checker_started_at = time.monotonic()
+        self.schedule_startup_grace_logged = False
         self.settings_window = self._create_settings_window()
         self.apply_confirm_window = self._create_apply_confirm_window()
 
@@ -845,8 +848,25 @@ class DraggableWindow(tk.Tk):
             logger.error(f"Suppression programme impossible: {e}")
 
     def check_scheduled_shutdowns(self):
-        """Déclenche l'extinction aux heures programmées, une seule fois par minute."""
+        """Déclenche l'extinction aux heures programmées, une seule fois par minute.
+
+        Au démarrage d'un Raspberry Pi sans horloge RTC, l'heure système peut rester
+        quelques instants sur la dernière heure connue avant la synchronisation NTP.
+        Sans temporisation, un programme d'arrêt proche de l'heure de coupure peut
+        donc être rejoué immédiatement au boot et provoquer une boucle d'extinction.
+        """
         try:
+            uptime_seconds = time.monotonic() - self.schedule_checker_started_at
+            if uptime_seconds < SCHEDULE_STARTUP_GRACE_SECONDS:
+                if not self.schedule_startup_grace_logged:
+                    logger.info(
+                        "Programmations d'arrêt ignorées pendant %.0fs au démarrage "
+                        "pour laisser l'heure système se synchroniser.",
+                        SCHEDULE_STARTUP_GRACE_SECONDS,
+                    )
+                    self.schedule_startup_grace_logged = True
+                return
+
             now = datetime.now()
             fire_key = now.strftime("%Y-%m-%d %H:%M")
             if fire_key != self.last_schedule_fire_key:

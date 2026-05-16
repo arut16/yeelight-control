@@ -1,5 +1,6 @@
 # Yeelight Touchscreen Home Automation Controller
 
+![Release 1.0.4](https://img.shields.io/badge/Release-1.0.4-blue)
 ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![Raspberry Pi 5](https://img.shields.io/badge/Raspberry%20Pi-5-C51A4A?logo=raspberrypi&logoColor=white)
 ![Yeelight LAN Mode](https://img.shields.io/badge/Yeelight-LAN%20Mode-00A86B)

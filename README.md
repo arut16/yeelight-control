@@ -17,6 +17,18 @@ The controller operates Yeelight bulbs directly on the local network through the
 
 ---
 
+## 🎯 Project Goals
+
+This project exists to provide a practical, self-hosted touchscreen controller for Yeelight smart bulbs in a home environment. It is designed for installations where responsiveness, local ownership, and predictable behavior are more important than cloud dashboards or mobile-app-first workflows.
+
+The core philosophy is to keep everyday lighting control close to the user and close to the devices. Commands are sent directly over the local LAN through Yeelight LAN control, which helps deliver fast response times, supports offline-capable operation when internet access is unavailable, and avoids relying on external cloud services for routine bulb actions.
+
+The user experience is intentionally simple: a Raspberry Pi touchscreen presents a kiosk-style interface with large controls, minimal navigation, and immediate feedback. This makes the controller suitable for wall-mounted, desk-mounted, or appliance-like home automation usage where the device should be ready for quick taps rather than keyboard-and-mouse interaction.
+
+Deployment is optimized for a lightweight Raspberry Pi setup. The application uses local scripts, local JSON configuration, and standard Linux desktop tooling so it can run as a dedicated controller without a heavy server stack. The goal is a home-controlled environment that remains understandable, maintainable, and easy to adapt for personal automation needs.
+
+---
+
 ## ⚡ Quick Start
 
 A minimal local setup workflow for a Raspberry Pi OS desktop session:
@@ -844,9 +856,7 @@ Potential improvements that fit the current architecture:
 
 ## 📄 License
 
-No license file is currently included in this repository.
-
-Before publishing or accepting external contributions, add a `LICENSE` file that clearly defines how the project may be used, modified, and redistributed.
+This project is licensed under the MIT License. See [`LICENSE`](LICENSE) for the full license text.
 
 ---
 

@@ -70,25 +70,35 @@ Before launching on real hardware, make sure the required local JSON files, imag
 
 ## 🖼️ Screenshots
 
-Add screenshots of the touchscreen UI here.
+### Main Dashboard
 
-Suggested captures:
+<p align="center">
+  <img src="docs/screenshots/main-dashboard.png" alt="Main Dashboard" width="560">
+</p>
 
-| Screen | Description |
-| --- | --- |
-| Main dashboard | Lamp buttons in fullscreen kiosk mode |
-| Settings modal | IP update, configuration editor, automation editor, update check, screensaver toggles |
-| Automation editor | Rule list and rule creation workflow |
-| Screensavers | Stars, Matrix, Lava Lamp, Particles, Nebula, Turbulence |
-| CPU bubble | Temperature/IP widget overlay |
+### Settings Modal
 
-```text
-docs/screenshots/main-dashboard.png
-docs/screenshots/settings-modal.png
-docs/screenshots/automation-editor.png
-docs/screenshots/screensaver-matrix.png
-docs/screenshots/cpu-bubble.png
-```
+<p align="center">
+  <img src="docs/screenshots/settings-modal.png" alt="Settings Modal" width="560">
+</p>
+
+### Automation Editor
+
+<p align="center">
+  <img src="docs/screenshots/automation-editor.png" alt="Automation Editor" width="560">
+</p>
+
+### Matrix Screensaver
+
+<p align="center">
+  <img src="docs/screenshots/screensaver-matrix.png" alt="Matrix Screensaver" width="560">
+</p>
+
+### CPU Bubble Widget
+
+<p align="center">
+  <img src="docs/screenshots/cpu-bubble.png" alt="CPU Bubble Widget" width="360">
+</p>
 
 ---
 

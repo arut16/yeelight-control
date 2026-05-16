@@ -504,6 +504,8 @@ Location label: Villeneuve-Loubet, France
 Timezone: Europe/Paris
 ```
 
+If a condition combines one pre-event bound and one post-event bound across sunrise and sunset, it is evaluated as two short windows around those solar events instead of one continuous overnight interval. For example, `sunset_offset_-60` to `sunrise_offset_60` is active from one hour before to one hour after sunset, and from one hour before to one hour after sunrise.
+
 If `astral` is unavailable or condition evaluation fails, the code treats the condition as active to keep automations from blocking unexpectedly.
 
 ---

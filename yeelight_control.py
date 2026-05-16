@@ -12,8 +12,10 @@ import random
 import math
 import time
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
+from zoneinfo import ZoneInfo
 import subprocess
+from solar_conditions import is_solar_condition_active
 
 # --- MODULE ASTRAL (Optionnel pour stabilité) ---
 try:
@@ -567,25 +569,15 @@ def draw_video_screensaver():
         full_surface.blit(fade_surface, (0, 0))
 
 # --- LOGIQUE AUTOMATISATION (FONCTIONS) ---
-def get_sun_time(offset_str, today_sun):
-    parts = offset_str.split('_')
-    sun_type = parts[0] 
-    offset_val = int(parts[2]) 
-    base_time = today_sun[sun_type]
-    if not isinstance(base_time, datetime): return datetime.now()
-    final_time = base_time + timedelta(minutes=offset_val)
-    return final_time.replace(tzinfo=None)
-
 def is_condition_active(condition_dict):
     if not ASTRAL_AVAILABLE or not CITY_INFO: return True 
     try:
-        s = sun(CITY_INFO.observer, date=datetime.now(), tzinfo=CITY_INFO.timezone)
-        now = datetime.now()
-        start_dt = get_sun_time(condition_dict['start'], s)
-        end_dt = get_sun_time(condition_dict['end'], s)
-        if start_dt > end_dt: return now >= start_dt or now <= end_dt
-        else: return start_dt <= now <= end_dt
-    except: return True 
+        local_now = datetime.now(ZoneInfo(CITY_INFO.timezone))
+        s = sun(CITY_INFO.observer, date=local_now.date(), tzinfo=CITY_INFO.timezone)
+        return is_solar_condition_active(condition_dict, s, local_now)
+    except Exception as exc:
+        logging.warning(f"Condition solaire ignorée après erreur: {exc}")
+        return True 
 
 def process_automation(trigger_name, trigger_state):
     try:

@@ -1,6 +1,6 @@
 # Yeelight Touchscreen Home Automation Controller
 
-![Release 1.0.5](https://img.shields.io/badge/Release-1.0.5-blue)
+![Release 1.0.6](https://img.shields.io/badge/Release-1.0.6-blue)
 ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![Raspberry Pi 5](https://img.shields.io/badge/Raspberry%20Pi-5-C51A4A?logo=raspberrypi&logoColor=white)
 ![Yeelight LAN Mode](https://img.shields.io/badge/Yeelight-LAN%20Mode-00A86B)
@@ -70,6 +70,7 @@ Before launching on real hardware, make sure the required local JSON files, imag
 - **Screensaver preview and enable/disable settings** from the touchscreen settings modal.
 - **Automation system** with a dedicated touchscreen editor.
 - **Astral sun condition support** for sunrise/sunset automation windows.
+- **Automation status hint on button**: when a configured automation triggers a target lamp inside an active solar window, the target lamp button shows a translucent `Auto On/Off jusqu'à HHhMM` message for 5 seconds.
 - **Lamp IP management** using local JSON files and `arp-scan` discovery.
 - **Virtual keyboard support** through `onboard` when editing lamp configuration.
 - **Automatic git update integration** from inside the UI.

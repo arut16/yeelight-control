@@ -12,7 +12,7 @@ import random
 import math
 import time
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 import subprocess
 from solar_conditions import is_solar_condition_active
@@ -568,6 +568,43 @@ def draw_video_screensaver():
         fade_surface.set_alpha(255 - int(alpha))
         full_surface.blit(fade_surface, (0, 0))
 
+
+
+AUTO_STATUS_DURATION = 5
+auto_status_by_button = {}
+
+def _get_active_solar_window_end(condition_dict):
+    if not ASTRAL_AVAILABLE or not CITY_INFO or not condition_dict:
+        return None
+    try:
+        local_now = datetime.now(ZoneInfo(CITY_INFO.timezone))
+        sun_times = sun(CITY_INFO.observer, date=local_now.date(), tzinfo=CITY_INFO.timezone)
+        start_event, start_offset = condition_dict["start"].rsplit("_offset_", 1)
+        end_event, end_offset = condition_dict["end"].rsplit("_offset_", 1)
+        start_offset = int(start_offset)
+        end_offset = int(end_offset)
+
+        if start_event != end_event and start_offset <= 0 <= end_offset:
+            before_offset = start_offset if start_offset <= 0 else -abs(start_offset)
+            after_offset = end_offset if end_offset >= 0 else abs(end_offset)
+            for event_name in (start_event, end_event):
+                base_time = sun_times[event_name]
+                window_start = base_time + timedelta(minutes=before_offset)
+                window_end = base_time + timedelta(minutes=after_offset)
+                if window_start <= local_now <= window_end:
+                    return window_end
+            return None
+
+        start_dt = sun_times[start_event] + timedelta(minutes=start_offset)
+        end_dt = sun_times[end_event] + timedelta(minutes=end_offset)
+        if start_dt <= end_dt:
+            return end_dt if start_dt <= local_now <= end_dt else None
+        if local_now >= start_dt or local_now <= end_dt:
+            return end_dt if local_now <= end_dt else end_dt + timedelta(days=1)
+    except Exception as exc:
+        logging.warning(f"Calcul fin tranche auto impossible: {exc}")
+    return None
+
 # --- LOGIQUE AUTOMATISATION (FONCTIONS) ---
 def is_condition_active(condition_dict):
     if not ASTRAL_AVAILABLE or not CITY_INFO: return True 
@@ -584,9 +621,10 @@ def process_automation(trigger_name, trigger_state):
         for rule in CACHED_RULES:
             if rule["trigger"] == trigger_name and rule["trigger_state"] == trigger_state:
                 condition_ok = True
-                if "condition" in rule and rule["condition"]:
-                    condition_ok = is_condition_active(rule["condition"])
-                
+                condition = rule.get("condition")
+                if condition:
+                    condition_ok = is_condition_active(condition)
+
                 if condition_ok:
                     target_name = rule["target"]
                     action = rule["action"]
@@ -595,11 +633,23 @@ def process_automation(trigger_name, trigger_state):
                         logging.info(f"Auto: {target_name} -> {action}")
                         try:
                             t_bulb = Bulb(target_ip)
-                            if action == "on": t_bulb.turn_on()
-                            else: t_bulb.turn_off()
+                            if action == "on":
+                                t_bulb.turn_on()
+                            else:
+                                t_bulb.turn_off()
                             lampe_states[target_name] = action
-                        except: pass
-    except: pass
+
+                            end_dt = _get_active_solar_window_end(condition)
+                            if end_dt:
+                                auto_action = "On" if action == "on" else "Off"
+                                auto_status_by_button[target_name] = {
+                                    "message": f"Auto {auto_action} jusqu'à {end_dt.strftime('%Hh%M')}",
+                                    "until": time.time() + AUTO_STATUS_DURATION,
+                                }
+                        except:
+                            pass
+    except:
+        pass
 
 def toggle_lampe(nom, ip):
     try:
@@ -898,6 +948,17 @@ def draw_single_button(surface, nom, btn, with_halo=False):
     icon = bulb_on_icon if lampe_states[nom] == "on" else bulb_off_icon
     surface.blit(icon, icon.get_rect(center=(btn["rect"].x + 30, btn["rect"].centery)))
     surface.blit(btn["text"], btn["text_rect"])
+
+    hint_info = auto_status_by_button.get(nom)
+    if hint_info:
+        if time.time() < hint_info["until"]:
+            hint_surface = popup_font.render(hint_info["message"], True, (255, 255, 255))
+            hint_surface.set_alpha(175)
+            hint_rect = hint_surface.get_rect(center=(btn["rect"].centerx, btn["rect"].centery + 20))
+            surface.blit(hint_surface, hint_rect)
+        else:
+            del auto_status_by_button[nom]
+
     if ripple_active and nom == ripple_button:
         rip = draw_ripple()
         if rip: surface.blit(rip, btn["rect"].topleft)

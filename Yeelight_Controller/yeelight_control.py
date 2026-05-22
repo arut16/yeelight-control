@@ -394,7 +394,7 @@ settings_button_rect = pg.Rect(10, SCREEN_HEIGHT - SETTINGS_BUTTON_SIZE - 10, SE
 confirm_rect = pg.Rect((SCREEN_WIDTH - CONFIRM_WIDTH) // 2, (SCREEN_HEIGHT - CONFIRM_HEIGHT) // 2, CONFIRM_WIDTH, CONFIRM_HEIGHT)
 yes_button_rect = pg.Rect(confirm_rect.x + 60, confirm_rect.y + 70, 100, 40)
 no_button_rect = pg.Rect(confirm_rect.x + 190, confirm_rect.y + 70, 100, 40)
-confirm_text = small_font.render("Fermer Yeelight Controller ?", True, (255, 255, 255))
+confirm_text = small_font.render("Fermer Yeelight_Controller ?", True, (255, 255, 255))
 yes_text = small_font.render("Oui", True, (255, 255, 255))
 no_text = small_font.render("Non", True, (255, 255, 255))
 

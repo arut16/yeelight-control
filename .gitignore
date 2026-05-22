@@ -14,9 +14,6 @@ nohup.out
 __pycache__/
 *.pyc
 
-Pictures/
-Videos/
-sounds/
 Music/
 Documents/
 Downloads/
@@ -39,3 +36,6 @@ font/
 .bash_logout
 .profile
 .dmrc
+
+# Runtime media placeholders
+Yeelight Controller/Videos/

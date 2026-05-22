@@ -16,8 +16,9 @@ import random
 import traceback
 
 # ====== Paramètres ======
-ICON_PATH = "/home/arut16/Pictures/update_logo.png"
-LOG_PATH = "/home/arut16/cpu_temp_bubble.log"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ICON_PATH = os.path.join(BASE_DIR, "Icons", "update_logo.png")
+LOG_PATH = os.path.join(BASE_DIR, "Logs", "cpu_temp_bubble.log")
 CHECK_INTERVAL_MS = 10800000
 ANIMATION_FRAME_MS = 50
 ANIMATION_STEP_DEG = -5
@@ -32,7 +33,7 @@ BULLE_FADEOUT_MS = 3000
 
 # --- Paramètres UPS secteur USB (NUT / upsc en priorité, sysfs en secours) ---
 UPS_NAME = os.getenv("CPU_BUBBLE_UPS_NAME", "master@localhost")
-UPS_CONFIG_PATH = os.getenv("CPU_BUBBLE_UPS_CONFIG", "/home/arut16/ups_shutdown_config.json")
+UPS_CONFIG_PATH = os.getenv("CPU_BUBBLE_UPS_CONFIG", os.path.join(BASE_DIR, "Config", "ups_shutdown_config.json"))
 UPOWER_UPS_PATHS = [p.strip() for p in os.getenv("CPU_BUBBLE_UPOWER_PATHS", "/org/freedesktop/UPower/devices/ups_hiddev0").split(",") if p.strip()]
 UPS_POLL_INTERVAL_MS = 5000
 UPS_STATUS_CONFIRMATION_COUNT = 3
@@ -1492,7 +1493,7 @@ class DraggableWindow(tk.Tk):
                 tailx = None
 
             cmd = [
-                "/usr/bin/python3", "/home/arut16/bubble_helper.py",
+                "/usr/bin/python3", os.path.join(BASE_DIR, "bubble_helper.py"),
                 "--x", str(bubble_x), "--y", str(bubble_y),
                 "--w", str(BULLE_W), "--h", str(BULLE_H - 12), # H corps
                 "--ms", str(BULLE_HOLD_MS),

@@ -29,7 +29,14 @@ except ImportError:
 os.environ["DISPLAY"] = ":0"
 
 # Configuration des logs avec rotation
-LOG_FILENAME = '/home/arut16/yeelight_control.log'
+PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_DIR = os.path.join(PROJECT_DIR, 'Config')
+LOGS_DIR = os.path.join(PROJECT_DIR, 'Logs')
+ICONS_DIR = os.path.join(PROJECT_DIR, 'Icons')
+SOUNDS_DIR = os.path.join(PROJECT_DIR, 'sounds')
+VIDEOS_DIR = os.path.join(PROJECT_DIR, 'Videos')
+
+LOG_FILENAME = os.path.join(LOGS_DIR, 'yeelight_control.log')
 MAX_LOG_SIZE = 10 * 1024 * 1024  # 10 Mo
 handler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=MAX_LOG_SIZE, backupCount=1, encoding="utf-8")
 handler.setLevel(logging.INFO)
@@ -39,24 +46,23 @@ logger.setLevel(logging.INFO)
 logger.addHandler(handler)
 
 # Chemin vers l'environnement virtuel
-venv_path = "/home/arut16/YeelightDomEnv"
+venv_path = os.path.expanduser("~/YeelightDomEnv")
 site_packages_path = os.path.join(venv_path, "lib", "python3.11", "site-packages")
 sys.path.insert(0, site_packages_path)
 
 # Fichiers de configuration
-LAMP_IPS_FILE = '/home/arut16/lamp_ips.json'
-LAMP_CONFIG_FILE = '/home/arut16/lamp_config.json'
-SCREENSAVERS_SET_FILE = '/home/arut16/screensavers_set.json'
+LAMP_IPS_FILE = os.path.join(CONFIG_DIR, 'lamp_ips.json')
+LAMP_CONFIG_FILE = os.path.join(CONFIG_DIR, 'lamp_config.json')
+SCREENSAVERS_SET_FILE = os.path.join(CONFIG_DIR, 'screensavers_set.json')
 
 # --- AJOUTS AUTOMATISATIONS ---
-AUTOMATIONS_FILE = '/home/arut16/automations.json'
-AUTOMATIONS_SCRIPT = '/home/arut16/automatisations_v12.py' # Interface V12
-CPU_BUBBLE_SCRIPT = '/home/arut16/cpu_temp_bubble.py'
-PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+AUTOMATIONS_FILE = os.path.join(CONFIG_DIR, 'automations.json')
+AUTOMATIONS_SCRIPT = os.path.join(PROJECT_DIR, 'automatisations.py')
+CPU_BUBBLE_SCRIPT = os.path.join(PROJECT_DIR, 'cpu_temp_bubble.py')
 VERSION_FILE = os.path.join(PROJECT_DIR, 'VERSION')
 
 # Scripts
-UPDATE_LAMP_IPS_SCRIPT = "/home/arut16/update_lamp_ips.py"
+UPDATE_LAMP_IPS_SCRIPT = os.path.join(PROJECT_DIR, 'update_lamp_ips.py')
 
 # --- CONFIGURATION GEO (Optimisation V26: Une seule fois) ---
 LATITUDE = 43.659
@@ -67,13 +73,13 @@ if ASTRAL_AVAILABLE:
 
 # --- CONFIGURATION VIDÉOS (IDENTIQUE V10.1) ---
 VIDEO_SEGMENT_DURATION = 300 
-LAVA_LAMP_VIDEO_PATH = "/home/arut16/Videos/lava_lamp.mp4"
+LAVA_LAMP_VIDEO_PATH = os.path.join(VIDEOS_DIR, "lava_lamp.mp4")
 LAVA_LAMP_DURATION = 16200 
-PARTICLES_VIDEO_PATH = "/home/arut16/Videos/particles_explosions.mp4"
+PARTICLES_VIDEO_PATH = os.path.join(VIDEOS_DIR, "particles_explosions.mp4")
 PARTICLES_DURATION = 36144 
-NEBULA_VIDEO_PATH = "/home/arut16/Videos/Nebula.mp4"
+NEBULA_VIDEO_PATH = os.path.join(VIDEOS_DIR, "Nebula.mp4")
 NEBULA_DURATION = 36036 
-TURBULENCE_VIDEO_PATH = "/home/arut16/Videos/Turbulence.mp4"
+TURBULENCE_VIDEO_PATH = os.path.join(VIDEOS_DIR, "Turbulence.mp4")
 TURBULENCE_DURATION = 42939
 
 # --- Gestion de la config Screensaver ---
@@ -293,16 +299,16 @@ preview_start_time = 0
 
 pg.init()
 pg.mixer.init(frequency=48000, size=-16, channels=2)
-click_sound = pg.mixer.Sound("/home/arut16/sounds/click.wav")
+click_sound = pg.mixer.Sound(os.path.join(SOUNDS_DIR, "click.wav"))
 click_sound.set_volume(0.9)
-light_on_sound = pg.mixer.Sound("/home/arut16/sounds/light_on.wav")
+light_on_sound = pg.mixer.Sound(os.path.join(SOUNDS_DIR, "light_on.wav"))
 light_on_sound.set_volume(0.9)
-light_off_sound = pg.mixer.Sound("/home/arut16/sounds/light_off.wav")
+light_off_sound = pg.mixer.Sound(os.path.join(SOUNDS_DIR, "light_off.wav"))
 light_off_sound.set_volume(0.9)
 pg.mixer.set_num_channels(8)
 
 pg.display.set_mode((1, 1))
-yeelight_taskbar_icon = pg.image.load("/home/arut16/Pictures/yeelight_logo_32x32.png").convert_alpha()
+yeelight_taskbar_icon = pg.image.load(os.path.join(ICONS_DIR, "yeelight_logo_32x32.png")).convert_alpha()
 pg.display.set_icon(yeelight_taskbar_icon)
 
 screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pg.FULLSCREEN)
@@ -316,12 +322,12 @@ fade_surface = pg.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
 fade_surface.fill((0, 0, 0))
 
 # Images
-bulb_on_icon = pg.image.load("/home/arut16/Pictures/bulb_on.png").convert_alpha()
-bulb_off_icon = pg.image.load("/home/arut16/Pictures/bulb_off.png").convert_alpha()
-arrow_back_icon = pg.image.load("/home/arut16/Pictures/arrow_back_icon.png").convert_alpha()
-raspberry_pi_icon = pg.image.load("/home/arut16/Pictures/raspberry-pi_logo_button.png").convert_alpha()
-yeelight_icon = pg.image.load("/home/arut16/Pictures/yeelight_logo_button.png").convert_alpha()
-settings_icon = pg.image.load("/home/arut16/Pictures/settings_icon.png").convert_alpha()
+bulb_on_icon = pg.image.load(os.path.join(ICONS_DIR, "bulb_on.png")).convert_alpha()
+bulb_off_icon = pg.image.load(os.path.join(ICONS_DIR, "bulb_off.png")).convert_alpha()
+arrow_back_icon = pg.image.load(os.path.join(ICONS_DIR, "arrow_back_icon.png")).convert_alpha()
+raspberry_pi_icon = pg.image.load(os.path.join(ICONS_DIR, "raspberry-pi_logo_button.png")).convert_alpha()
+yeelight_icon = pg.image.load(os.path.join(ICONS_DIR, "yeelight_logo_button.png")).convert_alpha()
+settings_icon = pg.image.load(os.path.join(ICONS_DIR, "settings_icon.png")).convert_alpha()
 settings_icon = pg.transform.scale(settings_icon, (SETTINGS_BUTTON_SIZE, SETTINGS_BUTTON_SIZE))
 
 # Polices
@@ -331,7 +337,7 @@ popup_font = pg.font.SysFont("Arial", 12, bold=True)
 center_popup_font = pg.font.SysFont("Arial", 24, bold=True)
 checkbox_font = pg.font.SysFont("Arial", 20, bold=False)
 preview_font = pg.font.SysFont("Arial", 12, bold=True) 
-matrix_font = pg.font.Font('/home/arut16/font/ms mincho.ttf', MATRIX_FONT_SIZE)
+matrix_font = pg.font.Font(os.path.join(PROJECT_DIR, 'font', 'ms mincho.ttf'), MATRIX_FONT_SIZE)
 katakana = [chr(int('0x30a0', 16) + i) for i in range(96)]
 green_katakana = [matrix_font.render(char, True, (40, random.randrange(160, 256), 40)) for char in katakana]
 lightgreen_katakana = [matrix_font.render(char, True, pg.Color('lightgreen')) for char in katakana]

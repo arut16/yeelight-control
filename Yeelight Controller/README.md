@@ -1,6 +1,6 @@
 # Yeelight Touchscreen Home Automation Controller
 
-![Release 1.0.6](https://img.shields.io/badge/Release-1.0.6-blue)
+![Release 1.1](https://img.shields.io/badge/Release-1.1-blue)
 ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![Raspberry Pi 5](https://img.shields.io/badge/Raspberry%20Pi-5-C51A4A?logo=raspberrypi&logoColor=white)
 ![Yeelight LAN Mode](https://img.shields.io/badge/Yeelight-LAN%20Mode-00A86B)
@@ -14,7 +14,7 @@ The controller operates Yeelight bulbs directly on the local network through the
 > **Target environment:** Raspberry Pi 5 + Raspberry Pi OS desktop session + touchscreen display.
 
 > [!WARNING]
-> Many runtime paths are currently hardcoded under `/home/arut16/`. Deployments on another username, home directory, or installation path require updating the scripts and local configuration paths accordingly before running the application.
+> Many runtime paths are currently hardcoded under `~/Yeelight Controller/`. Deployments on another username, home directory, or installation path require updating the scripts and local configuration paths accordingly before running the application.
 
 ---
 
@@ -37,8 +37,8 @@ A minimal local setup workflow for a Raspberry Pi OS desktop session:
 ```bash
 git clone <your-repository-url> yeelight-control
 cd yeelight-control
-python3 -m venv /home/arut16/YeelightDomEnv
-source /home/arut16/YeelightDomEnv/bin/activate
+python3 -m venv ~/Yeelight Controller/YeelightDomEnv
+source ~/Yeelight Controller/YeelightDomEnv/bin/activate
 pip install -r requirements.txt
 export DISPLAY=:0
 python3 yeelight_control.py
@@ -180,15 +180,15 @@ sudo apt install -y \
   libnotify-bin
 ```
 
-Clone the repository. The current scripts are optimized for the production path `/home/arut16`; if you use a different user or path, update the hardcoded paths in the Python and shell scripts accordingly.
+Clone the repository. The current scripts are optimized for the production path `~/Yeelight Controller`; if you use a different user or path, update the hardcoded paths in the Python and shell scripts accordingly.
 
 ```bash
-cd /home/arut16
+cd ~/Yeelight Controller
 git clone <your-repository-url> yeelight-control
 cd yeelight-control
 ```
 
-For the existing production-style path layout, scripts may also be placed directly in `/home/arut16`. The startup script detects whether the application is in `/home/arut16` and falls back to the directory containing the script when needed.
+For the existing production-style path layout, scripts may also be placed directly in `~/Yeelight Controller`. The startup script detects whether the application is in `~/Yeelight Controller` and falls back to the directory containing the script when needed.
 
 ---
 
@@ -197,14 +197,14 @@ For the existing production-style path layout, scripts may also be placed direct
 The application currently expects the production virtual environment at:
 
 ```text
-/home/arut16/YeelightDomEnv
+~/Yeelight Controller/YeelightDomEnv
 ```
 
 Create it with:
 
 ```bash
-python3 -m venv /home/arut16/YeelightDomEnv
-source /home/arut16/YeelightDomEnv/bin/activate
+python3 -m venv ~/Yeelight Controller/YeelightDomEnv
+source ~/Yeelight Controller/YeelightDomEnv/bin/activate
 python -m pip install --upgrade pip setuptools wheel
 ```
 
@@ -220,8 +220,8 @@ If you choose another virtual environment path, update:
 Install the Python dependencies from the repository:
 
 ```bash
-source /home/arut16/YeelightDomEnv/bin/activate
-cd /home/arut16/yeelight-control
+source ~/Yeelight Controller/YeelightDomEnv/bin/activate
+cd ~/Yeelight Controller/yeelight-control
 pip install -r requirements.txt
 ```
 
@@ -248,17 +248,17 @@ The video screensavers use `ffmpeg-python` to start an `ffmpeg` process that rea
 Configured production video paths:
 
 ```text
-/home/arut16/Videos/lava_lamp.mp4
-/home/arut16/Videos/particles_explosions.mp4
-/home/arut16/Videos/Nebula.mp4
-/home/arut16/Videos/Turbulence.mp4
+~/Yeelight Controller/Videos/lava_lamp.mp4
+~/Yeelight Controller/Videos/particles_explosions.mp4
+~/Yeelight Controller/Videos/Nebula.mp4
+~/Yeelight Controller/Videos/Turbulence.mp4
 ```
 
 Create the directory and copy your videos:
 
 ```bash
-mkdir -p /home/arut16/Videos
-# Copy the required video files into /home/arut16/Videos
+mkdir -p ~/Yeelight Controller/Videos
+# Copy the required video files into ~/Yeelight Controller/Videos
 ```
 
 ---
@@ -270,38 +270,38 @@ Several local files and assets are referenced by absolute production paths. Ensu
 ### JSON configuration files
 
 ```text
-/home/arut16/lamp_ips.json
-/home/arut16/lamp_config.json
-/home/arut16/screensavers_set.json
-/home/arut16/automations.json
-/home/arut16/ups_shutdown_config.json
+~/Yeelight Controller/lamp_ips.json
+~/Yeelight Controller/lamp_config.json
+~/Yeelight Controller/screensavers_set.json
+~/Yeelight Controller/automations.json
+~/Yeelight Controller/ups_shutdown_config.json
 ```
 
 ### Image assets
 
 ```text
-/home/arut16/Pictures/yeelight_logo_32x32.png
-/home/arut16/Pictures/bulb_on.png
-/home/arut16/Pictures/bulb_off.png
-/home/arut16/Pictures/arrow_back_icon.png
-/home/arut16/Pictures/raspberry-pi_logo_button.png
-/home/arut16/Pictures/yeelight_logo_button.png
-/home/arut16/Pictures/settings_icon.png
-/home/arut16/Pictures/update_logo.png
+~/Yeelight Controller/Icons/yeelight_logo_32x32.png
+~/Yeelight Controller/Icons/bulb_on.png
+~/Yeelight Controller/Icons/bulb_off.png
+~/Yeelight Controller/Icons/arrow_back_icon.png
+~/Yeelight Controller/Icons/raspberry-pi_logo_button.png
+~/Yeelight Controller/Icons/yeelight_logo_button.png
+~/Yeelight Controller/Icons/settings_icon.png
+~/Yeelight Controller/Icons/update_logo.png
 ```
 
 ### Sound assets
 
 ```text
-/home/arut16/sounds/click.wav
-/home/arut16/sounds/light_on.wav
-/home/arut16/sounds/light_off.wav
+~/Yeelight Controller/sounds/click.wav
+~/Yeelight Controller/sounds/light_on.wav
+~/Yeelight Controller/sounds/light_off.wav
 ```
 
 ### Font asset
 
 ```text
-/home/arut16/font/ms mincho.ttf
+~/Yeelight Controller/font/ms mincho.ttf
 ```
 
 The Matrix screensaver uses this font to render Katakana-style symbols.
@@ -314,8 +314,8 @@ From a Raspberry Pi desktop session:
 
 ```bash
 export DISPLAY=:0
-source /home/arut16/YeelightDomEnv/bin/activate
-cd /home/arut16/yeelight-control
+source ~/Yeelight Controller/YeelightDomEnv/bin/activate
+cd ~/Yeelight Controller/yeelight-control
 python3 yeelight_control.py
 ```
 
@@ -323,8 +323,8 @@ To start the CPU temperature bubble separately:
 
 ```bash
 export DISPLAY=:0
-source /home/arut16/YeelightDomEnv/bin/activate
-cd /home/arut16/yeelight-control
+source ~/Yeelight Controller/YeelightDomEnv/bin/activate
+cd ~/Yeelight Controller/yeelight-control
 python3 cpu_temp_bubble.py
 ```
 
@@ -347,19 +347,19 @@ One common Raspberry Pi OS desktop approach is LXDE autostart:
 
 ```bash
 mkdir -p ~/.config/lxsession/LXDE-pi
-nano ~/.config/lxsession/LXDE-pi/autostart
+sudo nano /etc/xdg/lxsession/LXDE-pi/autostart
 ```
 
 Add:
 
 ```text
-@/home/arut16/yeelight-control/start_yeelight_control.sh
+@"/home/arut16/Yeelight Controller/start_yeelight_control.sh"
 ```
 
 Make the script executable:
 
 ```bash
-chmod +x /home/arut16/yeelight-control/start_yeelight_control.sh
+chmod +x "/home/arut16/Yeelight Controller/start_yeelight_control.sh"
 ```
 
 Reboot to test:
@@ -371,10 +371,10 @@ sudo reboot
 Startup logs are written to:
 
 ```text
-/home/arut16/start_yeelight_control_debug.log
+~/Yeelight Controller/start_yeelight_control_debug.log
 ```
 
-> If your project is installed somewhere else, adjust the path in the autostart entry. The script itself falls back to its own directory if it does not find the application scripts directly in `/home/arut16`.
+> If your project is installed somewhere else, adjust the path in the autostart entry. The script itself falls back to its own directory if it does not find the application scripts directly in `~/Yeelight Controller`.
 
 ---
 
@@ -407,7 +407,7 @@ How it works:
 Manual equivalent:
 
 ```bash
-cd /home/arut16/yeelight-control
+cd ~/Yeelight Controller/yeelight-control
 git fetch --prune
 git status
 git pull --ff-only
@@ -439,7 +439,7 @@ Available modes:
 Screensaver settings are stored in:
 
 ```text
-/home/arut16/screensavers_set.json
+~/Yeelight Controller/screensavers_set.json
 ```
 
 The settings modal lets you:
@@ -458,12 +458,12 @@ ffmpeg input video -> raw rgb24 pipe -> numpy frame -> pygame surface
 
 ## 🤖 Automation System
 
-Automation rules are edited with `automatisations_v12.py`, a dedicated fullscreen `tkinter` interface optimized for the same 640×480 touchscreen.
+Automation rules are edited with `automatisations.py`, a dedicated fullscreen `tkinter` interface optimized for the same 640×480 touchscreen.
 
 Rules are stored in:
 
 ```text
-/home/arut16/automations.json
+~/Yeelight Controller/automations.json
 ```
 
 A rule contains:
@@ -513,14 +513,14 @@ If `astral` is unavailable or condition evaluation fails, the code treats the co
 
 ## 🧩 Configuration Files
 
-The current configuration model is file-based and uses production paths under `/home/arut16/`. Future versions may centralize paths and runtime settings into a dedicated configuration system or `.env`-style configuration to improve portability.
+The current configuration model is file-based and uses paths under `~/Yeelight Controller/`. Future versions may centralize paths and runtime settings into a dedicated configuration system or `.env`-style configuration to improve portability.
 
 ### `lamp_config.json`
 
 Production path:
 
 ```text
-/home/arut16/lamp_config.json
+~/Yeelight Controller/lamp_config.json
 ```
 
 Used by `update_lamp_ips.py` to map lamp names and MAC addresses. The script supports either common orientation and normalizes the mapping internally.
@@ -539,7 +539,7 @@ Example:
 Production path:
 
 ```text
-/home/arut16/lamp_ips.json
+~/Yeelight Controller/lamp_ips.json
 ```
 
 Used by the main UI to build lamp buttons and connect to bulbs.
@@ -558,7 +558,7 @@ Example:
 Production path:
 
 ```text
-/home/arut16/screensavers_set.json
+~/Yeelight Controller/screensavers_set.json
 ```
 
 Stores enabled/disabled flags for screensaver modes.
@@ -581,7 +581,7 @@ Example:
 Production path:
 
 ```text
-/home/arut16/automations.json
+~/Yeelight Controller/automations.json
 ```
 
 Stores automation rules created by the automation editor.
@@ -604,18 +604,18 @@ The project uses local log files suitable for unattended Raspberry Pi operation.
 
 | Component | Log file | Notes |
 | --- | --- | --- |
-| Main controller | `/home/arut16/yeelight_control.log` | Uses `RotatingFileHandler`, 10 MB max, one backup. |
-| Startup launcher | `/home/arut16/start_yeelight_control_debug.log` | Recreated each launcher run. |
-| CPU bubble | `/home/arut16/cpu_temp_bubble.log` | Uses rotating logging in `cpu_temp_bubble.py`. |
+| Main controller | `~/Yeelight Controller/yeelight_control.log` | Uses `RotatingFileHandler`, 10 MB max, one backup. |
+| Startup launcher | `~/Yeelight Controller/start_yeelight_control_debug.log` | Recreated each launcher run. |
+| CPU bubble | `~/Yeelight Controller/cpu_temp_bubble.log` | Uses rotating logging in `cpu_temp_bubble.py`. |
 | Lamp IP updater | `lamp_ips_update.log` | Relative to the working directory used when running `update_lamp_ips.py`. |
 | SD watchdog | stdout/system service logs | Intended for service-style execution or terminal monitoring. |
 
 Useful commands:
 
 ```bash
-tail -f /home/arut16/yeelight_control.log
-tail -f /home/arut16/start_yeelight_control_debug.log
-tail -f /home/arut16/cpu_temp_bubble.log
+tail -f ~/Yeelight Controller/yeelight_control.log
+tail -f ~/Yeelight Controller/start_yeelight_control_debug.log
+tail -f ~/Yeelight Controller/cpu_temp_bubble.log
 ```
 
 ---
@@ -640,7 +640,7 @@ tail -f /home/arut16/cpu_temp_bubble.log
                 │                   │
                 │                   ▼
                 │        ┌───────────────────────┐
-                │        │ automatisations_v12.py │
+                │        │ automatisations.py │
                 │        │ tkinter editor         │
                 │        │ automations.json       │
                 │        └───────────────────────┘
@@ -674,7 +674,7 @@ The architecture currently favors a direct Raspberry Pi deployment layout with l
 .
 ├── README.md
 ├── VERSION
-├── automatisations_v12.py      # Touchscreen automation editor
+├── automatisations.py      # Touchscreen automation editor
 ├── bubble_helper.py            # PyQt5 speech-bubble overlay helper
 ├── cpu_temp_bubble.py          # CPU temperature / IP / update / UPS bubble widget
 ├── requirements.txt            # Python dependency pins
@@ -701,7 +701,7 @@ pgrep -f lxsession
 Review launcher logs:
 
 ```bash
-tail -n 100 /home/arut16/start_yeelight_control_debug.log
+tail -n 100 ~/Yeelight Controller/start_yeelight_control_debug.log
 ```
 
 ### `pygame.error: No available video device`
@@ -723,14 +723,14 @@ ping <lamp-ip>
 Confirm `lamp_ips.json` contains the current IP addresses:
 
 ```bash
-cat /home/arut16/lamp_ips.json
+cat ~/Yeelight Controller/lamp_ips.json
 ```
 
 Refresh lamp IPs:
 
 ```bash
-cd /home/arut16/yeelight-control
-source /home/arut16/YeelightDomEnv/bin/activate
+cd ~/Yeelight Controller/yeelight-control
+source ~/Yeelight Controller/YeelightDomEnv/bin/activate
 python3 update_lamp_ips.py
 ```
 
@@ -757,7 +757,7 @@ If this requires a password during kiosk use, configure appropriate sudo rules f
 Verify videos exist at the configured paths:
 
 ```bash
-ls -lh /home/arut16/Videos
+ls -lh ~/Yeelight Controller/Videos
 ```
 
 Verify `ffmpeg` works:
@@ -773,7 +773,7 @@ If hardware acceleration causes issues on your OS image, inspect the `ffmpeg.inp
 Ensure this file exists:
 
 ```bash
-ls -lh "/home/arut16/font/ms mincho.ttf"
+ls -lh "~/Yeelight Controller/font/ms mincho.ttf"
 ```
 
 Or update the font path in `yeelight_control.py`.
@@ -783,7 +783,7 @@ Or update the font path in `yeelight_control.py`.
 Ensure the referenced sound assets exist:
 
 ```bash
-ls -lh /home/arut16/sounds
+ls -lh ~/Yeelight Controller/sounds
 ```
 
 Required files:
@@ -809,7 +809,7 @@ The app launches `onboard` while editing the lamp configuration file from the se
 Check repository status and upstream configuration:
 
 ```bash
-cd /home/arut16/yeelight-control
+cd ~/Yeelight Controller/yeelight-control
 git status
 git remote -v
 git branch -vv
@@ -832,7 +832,7 @@ Make sure those commands are valid for your Raspberry Pi OS networking setup. Ne
 
 ## ⚠️ Known Limitations
 
-- Many paths are hardcoded under `/home/arut16/`, which requires manual updates for other users or installation directories.
+- Many paths are hardcoded under `~/Yeelight Controller/`, which requires manual updates for other users or installation directories.
 - The UI is optimized mainly for 640×480 Raspberry Pi touchscreen usage.
 - There is no authentication layer; the controller is intended for trusted local touchscreen access.
 - The application is designed for LAN environments only and expects Yeelight bulbs to be reachable locally.
@@ -845,7 +845,7 @@ Make sure those commands are valid for your Raspberry Pi OS networking setup. Ne
 
 Potential improvements that fit the current architecture:
 
-- Replace hardcoded `/home/arut16` paths with a single configuration file or environment variables.
+- Replace hardcoded `~/Yeelight Controller` paths with a single configuration file or environment variables.
 - Add a first-run setup wizard for lamp config, assets, and paths.
 - Add systemd user/service templates for startup instead of relying only on desktop autostart.
 - Add screenshots and a short demo video to the repository.

@@ -1,0 +1,24 @@
+[
+    {
+        "trigger": "Chambre David",
+        "trigger_state": "off",
+        "target": "Bureau David",
+        "action": "off",
+        "condition": {
+            "start": "sunset_offset_-120",
+            "end": "sunrise_offset_120",
+            "text": "D\u00e9but: 2 h avant coucher, Fin: 2 h apr\u00e8s lever"
+        }
+    },
+    {
+        "trigger": "Chambre David",
+        "trigger_state": "on",
+        "target": "Bureau David",
+        "action": "on",
+        "condition": {
+            "start": "sunset_offset_-120",
+            "end": "sunrise_offset_120",
+            "text": "D\u00e9but: 2 h avant coucher, Fin: 2 h apr\u00e8s lever"
+        }
+    }
+]

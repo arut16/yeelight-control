@@ -6,7 +6,7 @@ import subprocess
 from collections import deque
 
 DISPLAY = ":0"
-XAUTH = "/home/arut16/.Xauthority"
+XAUTH = os.path.expanduser("~/.Xauthority")
 
 # Détection robuste : mmc0, mmcblk0, sdhci + mots-clés d'erreur
 PATTERN = re.compile(

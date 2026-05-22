@@ -1,17 +1,13 @@
 #!/bin/bash
 
 # Fichier de log unique pour tout le processus
-LOG_FILE="/home/arut16/start_yeelight_control_debug.log"
-PYTHON_BIN="/home/arut16/YeelightDomEnv/bin/python3"
-APP_DIR="/home/arut16"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-
-# Sur le Raspberry Pi de production, tous les scripts sont directement dans
-# /home/arut16. Si ce chemin n'est pas disponible (tests/dev), on retombe sur
-# le dossier qui contient ce lanceur.
-if [ ! -f "$APP_DIR/yeelight_control.py" ] || [ ! -f "$APP_DIR/cpu_temp_bubble.py" ]; then
-    APP_DIR="$SCRIPT_DIR"
+LOG_FILE="$SCRIPT_DIR/Logs/start_yeelight_control_debug.log"
+PYTHON_BIN="$SCRIPT_DIR/YeelightDomEnv/bin/python3"
+if [ ! -x "$PYTHON_BIN" ]; then
+    PYTHON_BIN="$HOME/YeelightDomEnv/bin/python3"
 fi
+APP_DIR="$SCRIPT_DIR"
 
 if [ ! -f "$APP_DIR/yeelight_control.py" ] || [ ! -f "$APP_DIR/cpu_temp_bubble.py" ]; then
     echo "Erreur: scripts Yeelight introuvables dans $APP_DIR" > "$LOG_FILE"

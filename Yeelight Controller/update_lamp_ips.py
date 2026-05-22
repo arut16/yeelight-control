@@ -3,10 +3,15 @@
 import subprocess
 import json
 import logging
+import os
 from datetime import datetime
 
 # Configuration des logs
-logging.basicConfig(filename='lamp_ips_update.log', level=logging.INFO,
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_DIR = os.path.join(BASE_DIR, 'Config')
+LOGS_DIR = os.path.join(BASE_DIR, 'Logs')
+
+logging.basicConfig(filename=os.path.join(LOGS_DIR, 'lamp_ips_update.log'), level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- DÉBUT DE LA LOGIQUE INTELLIGENTE ---
@@ -24,7 +29,7 @@ DEFAULT_MAC_TO_NAME = {
 
 # 2. On essaie de charger la configuration dynamique depuis lamp_config.json
 try:
-    with open('/home/arut16/lamp_config.json', 'r') as f:
+    with open(os.path.join(CONFIG_DIR, 'lamp_config.json'), 'r') as f:
         config = json.load(f)
         # On inverse la logique du JSON qui est souvent Nom -> MAC ou l'inverse
         # Votre JSON est : "MAC": "Nom" (comme dans le code python)
@@ -49,7 +54,7 @@ DESIRED_ORDER = list(MAC_TO_NAME.values())
 def load_existing_lamp_ips():
     """Charge les IPs actuelles depuis lamp_ips.json, ou retourne un dictionnaire vide si le fichier n'existe pas."""
     try:
-        with open('lamp_ips.json', 'r') as f:
+        with open(os.path.join(CONFIG_DIR, 'lamp_ips.json'), 'r') as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         logging.warning("lamp_ips.json non trouvé ou invalide. Démarrage avec un dictionnaire vide.")
@@ -93,7 +98,7 @@ def get_lamp_ips():
         ordered_lamp_ips = {name: lamp_ips.get(name) for name in DESIRED_ORDER if name in lamp_ips}
         
         # Sauvegarder le dictionnaire ordonné dans lamp_ips.json
-        with open('lamp_ips.json', 'w') as f:
+        with open(os.path.join(CONFIG_DIR, 'lamp_ips.json'), 'w') as f:
             json.dump(ordered_lamp_ips, f, indent=4)
         
         logging.info(f"Table des IPs des lampes mise à jour à {datetime.now()} avec l’ordre : {list(ordered_lamp_ips.keys())}")

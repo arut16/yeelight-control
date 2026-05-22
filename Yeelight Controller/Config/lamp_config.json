@@ -1,0 +1,11 @@
+{
+    "lampes": {
+        "50:EC:50:81:B1:1C": "Chambre",
+        "50:EC:50:82:99:BF": "Chambre David",
+        "50:EC:50:82:A7:14": "Bureau",
+        "B4:60:ED:2D:FF:4F": "Bureau David",
+        "04:CF:8C:B3:C4:BF": "Salon",
+        "54:48:E6:5E:18:EC": "Cuisine",
+        "54:48:E6:78:AF:6C": "Salle de Bain"
+    }
+}

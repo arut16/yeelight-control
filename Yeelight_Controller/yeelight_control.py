@@ -30,6 +30,8 @@ os.environ["DISPLAY"] = ":0"
 
 # Configuration des logs avec rotation
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_PARENT_DIR = os.path.dirname(PROJECT_DIR)
+REPO_DIR = PROJECT_PARENT_DIR if os.path.isdir(os.path.join(PROJECT_PARENT_DIR, '.git')) else PROJECT_DIR
 CONFIG_DIR = os.path.join(PROJECT_DIR, 'Config')
 LOGS_DIR = os.path.join(PROJECT_DIR, 'Logs')
 ICONS_DIR = os.path.join(PROJECT_DIR, 'Icons')
@@ -122,7 +124,7 @@ def load_project_version():
 def run_git_command(args):
     completed = subprocess.run(
         ['git', *args],
-        cwd=PROJECT_DIR,
+        cwd=REPO_DIR,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -145,7 +147,7 @@ def get_upstream_ref():
 
 def get_project_version_from_ref(ref):
     try:
-        version = run_git_command(['show', f'{ref}:VERSION']).strip()
+        version = run_git_command(['show', f'{ref}:Yeelight_Controller/VERSION']).strip()
         return version or None
     except RuntimeError as e:
         logging.error(f"Erreur lecture version distante: {e}")
@@ -164,7 +166,13 @@ def get_project_updates():
     return update_files
 
 def apply_project_updates():
-    run_git_command(['pull', '--ff-only'])
+    try:
+        run_git_command(['pull', '--ff-only'])
+    except RuntimeError as e:
+        message = str(e)
+        if any(text in message for text in ['Please commit your changes', 'Please stash your changes', 'would be overwritten by merge']):
+            raise RuntimeError("Mise à jour bloquée : des modifications locales empêchent git pull. Committez ou stashez vos changements puis réessayez.")
+        raise
 
 def restart_project_processes():
     try:

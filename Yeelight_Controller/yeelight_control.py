@@ -202,6 +202,47 @@ def load_lamp_ips():
 LAMP_IPS = load_lamp_ips()
 BULB_OBJECTS = {}
 
+def load_lamp_config():
+    default = {"lampes": {}}
+    try:
+        with open(LAMP_CONFIG_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            lampes = data.get("lampes", {})
+            if isinstance(lampes, dict):
+                return {"lampes": lampes}
+    except Exception:
+        pass
+    return default
+
+def save_lamp_config(lampes_list):
+    try:
+        ordered = {item["mac"]: item["name"] for item in lampes_list if item["mac"] and item["name"]}
+        with open(LAMP_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump({"lampes": ordered}, f, indent=4, ensure_ascii=False)
+    except Exception as e:
+        logging.error(f"Erreur sauvegarde lamp_config: {e}")
+
+def build_lampes_from_config():
+    cfg = load_lamp_config()
+    result = []
+    for mac, name in cfg.get("lampes", {}).items():
+        result.append({"name": name, "mac": mac.upper(), "ip": LAMP_IPS.get(name, "N/A")})
+    return result
+
+def get_detected_macs():
+    macs = []
+    try:
+        result = subprocess.run(['sudo', 'arp-scan', '--localnet'], capture_output=True, text=True, timeout=10, check=True)
+        for line in result.stdout.splitlines()[2:]:
+            parts = line.split('\t')
+            if len(parts) >= 2:
+                mac = parts[1].strip().upper()
+                if mac and mac not in macs:
+                    macs.append(mac)
+    except Exception:
+        pass
+    return macs
+
 def get_bulb(ip):
     bulb = BULB_OBJECTS.get(ip)
     if bulb is None:
@@ -275,6 +316,15 @@ fade_start_time = 0
 last_activity = time.time()
 show_confirm = False
 show_settings_modal = False
+show_edit_lamps_modal = False
+show_lamp_detail_modal = False
+show_mac_list_modal = False
+dragging_lamp_index = None
+drag_mouse_offset = (0, 0)
+selected_lamp_index = None
+lampes_editor_data = build_lampes_from_config()
+detected_macs = []
+editing_lamp_name = False
 show_update_modal = False
 update_files = []
 update_version = None
@@ -416,8 +466,9 @@ text_maj_ip = small_font.render("MAJ @IP lampes", True, (255, 255, 255))
 text_maj_ip_rect = text_maj_ip.get_rect(center=btn_maj_ip_rect.center)
 
 btn_edit_config_rect = pg.Rect(settings_modal_rect.x + 20, settings_modal_rect.y + 160, SETTINGS_BTN_WIDTH, SETTINGS_BTN_HEIGHT)
-text_edit_config = small_font.render("Editer Lamp Ips", True, (255, 255, 255))
+text_edit_config = small_font.render("Editer Lampes", True, (255, 255, 255))
 text_edit_config_rect = text_edit_config.get_rect(center=btn_edit_config_rect.center)
+btn_close_submenu_rect = pg.Rect(settings_modal_rect.right - 50, settings_modal_rect.y + 10, 35, 30)
 
 # --- AJOUT BOUTON AUTOMATISATIONS ---
 btn_auto_rect = pg.Rect(settings_modal_rect.x + 20, settings_modal_rect.y + 240, SETTINGS_BTN_WIDTH, SETTINGS_BTN_HEIGHT)
@@ -1012,6 +1063,17 @@ while running:
         if event.type == pg.QUIT:
             stop_screensaver()
             running = False
+        elif event.type == pg.KEYDOWN and show_edit_lamps_modal and show_lamp_detail_modal and editing_lamp_name and selected_lamp_index is not None:
+            current_name = lampes_editor_data[selected_lamp_index]["name"]
+            if event.key == pg.K_RETURN:
+                editing_lamp_name = False
+                save_lamp_config(lampes_editor_data)
+                reload_ui_from_config()
+            elif event.key == pg.K_BACKSPACE:
+                lampes_editor_data[selected_lamp_index]["name"] = current_name[:-1]
+            else:
+                if event.unicode and event.unicode.isprintable():
+                    lampes_editor_data[selected_lamp_index]["name"] = current_name + event.unicode
         elif event.type == pg.MOUSEBUTTONDOWN:
             pos = event.pos
             if pg.time.get_ticks() - last_click_sound_time > 100:
@@ -1043,6 +1105,52 @@ while running:
                 elif no_button_rect.collidepoint(pos): show_confirm = False
             elif config_saved:
                 if config_ok_button_rect.collidepoint(pos): config_saved = False
+            elif show_edit_lamps_modal and is_fullscreen:
+                if btn_close_submenu_rect.collidepoint(pos):
+                    show_edit_lamps_modal = False
+                    show_lamp_detail_modal = False
+                    show_mac_list_modal = False
+                    selected_lamp_index = None
+                    dragging_lamp_index = None
+                else:
+                    list_x = settings_modal_rect.x + 20
+                    list_y = settings_modal_rect.y + 60
+                    row_h = 46
+                    if show_mac_list_modal and selected_lamp_index is not None:
+                        mac_y_start = settings_modal_rect.y + 145
+                        for i, mac in enumerate(detected_macs):
+                            r = pg.Rect(settings_modal_rect.x + 50, mac_y_start + i * 28, settings_modal_rect.width - 100, 24)
+                            if r.collidepoint(pos):
+                                lampes_editor_data[selected_lamp_index]["mac"] = mac
+                                save_lamp_config(lampes_editor_data)
+                                show_mac_list_modal = False
+                                break
+                    elif show_lamp_detail_modal and selected_lamp_index is not None:
+                        name_rect = pg.Rect(settings_modal_rect.x + 60, settings_modal_rect.y + 90, settings_modal_rect.width - 120, 38)
+                        mac_rect = pg.Rect(settings_modal_rect.x + 60, settings_modal_rect.y + 145, settings_modal_rect.width - 120, 38)
+                        if name_rect.collidepoint(pos):
+                            try:
+                                keyboard_height = SCREEN_HEIGHT // 3
+                                keyboard_process = subprocess.Popen(['onboard', '--size', f'{SCREEN_WIDTH}x{keyboard_height}'], stderr=subprocess.DEVNULL)
+                                editing_lamp_name = True
+                            except Exception:
+                                pass
+                        elif mac_rect.collidepoint(pos):
+                            detected_macs = get_detected_macs() or [l["mac"] for l in lampes_editor_data if l["mac"]]
+                            show_mac_list_modal = True
+                    else:
+                        for i, lamp in enumerate(lampes_editor_data):
+                            row_rect = pg.Rect(list_x, list_y + i * row_h, settings_modal_rect.width - 40, 40)
+                            drag_handle = pg.Rect(row_rect.x + 6, row_rect.y + 8, 20, 24)
+                            if drag_handle.collidepoint(pos):
+                                dragging_lamp_index = i
+                                drag_mouse_offset = (pos[0] - row_rect.x, pos[1] - row_rect.y)
+                                break
+                            if row_rect.collidepoint(pos):
+                                selected_lamp_index = i
+                                show_lamp_detail_modal = True
+                                show_mac_list_modal = False
+                                break
             elif show_settings_modal and is_fullscreen:
                 if btn_maj_ip_rect.collidepoint(pos):
                     try:
@@ -1055,15 +1163,11 @@ while running:
                     except Exception as e: logging.error(f"MAJ Error: {e}")
                     show_settings_modal = False
                 elif btn_edit_config_rect.collidepoint(pos):
-                    show_settings_modal = False
-                    if not editing_config:
-                        toggle_window_mode()
-                        try:
-                            config_process = subprocess.Popen(['mousepad', LAMP_CONFIG_FILE], stderr=subprocess.DEVNULL)
-                            keyboard_height = SCREEN_HEIGHT // 3
-                            keyboard_process = subprocess.Popen(['onboard', '--size', f'{SCREEN_WIDTH}x{keyboard_height}'], stderr=subprocess.DEVNULL)
-                            editing_config = True
-                        except Exception: pass
+                    show_edit_lamps_modal = True
+                    show_lamp_detail_modal = False
+                    show_mac_list_modal = False
+                    selected_lamp_index = None
+                    lampes_editor_data = build_lampes_from_config()
                 
                 # --- AJOUT CLIC AUTOMATISATION ---
                 elif btn_auto_rect.collidepoint(pos):
@@ -1145,6 +1249,21 @@ while running:
                     start_video_screensaver()
 
                 elif not settings_modal_rect.collidepoint(pos): show_settings_modal = False
+        elif event.type == pg.MOUSEBUTTONUP:
+            if dragging_lamp_index is not None:
+                dragging_lamp_index = None
+                save_lamp_config(lampes_editor_data)
+                reload_ui_from_config()
+        elif event.type == pg.MOUSEMOTION:
+            if show_edit_lamps_modal and dragging_lamp_index is not None:
+                list_y = settings_modal_rect.y + 60
+                row_h = 46
+                y = event.pos[1]
+                target_index = max(0, min(len(lampes_editor_data) - 1, int((y - list_y) / row_h)))
+                if target_index != dragging_lamp_index:
+                    item = lampes_editor_data.pop(dragging_lamp_index)
+                    lampes_editor_data.insert(target_index, item)
+                    dragging_lamp_index = target_index
             else:
                 if settings_button_rect.collidepoint(pos) and is_fullscreen: show_settings_modal = True
                 for nom, btn in boutons.items():
@@ -1315,6 +1434,46 @@ while running:
 
     if show_update_modal and is_fullscreen and not screensaver_active:
         draw_update_modal(full_surface)
+
+    if show_edit_lamps_modal and is_fullscreen and not screensaver_active:
+        overlay = pg.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pg.SRCALPHA)
+        overlay.fill((0, 0, 0, 200))
+        full_surface.blit(overlay, (0, 0))
+        pg.draw.rect(full_surface, (70, 70, 80), settings_modal_rect)
+        pg.draw.rect(full_surface, (220, 220, 220), settings_modal_rect, 2)
+        title = font.render("Editer Lampes", True, (255, 255, 255))
+        full_surface.blit(title, (settings_modal_rect.x + 20, settings_modal_rect.y + 15))
+        pg.draw.rect(full_surface, (130, 40, 40), btn_close_submenu_rect)
+        full_surface.blit(small_font.render("X", True, (255, 255, 255)), (btn_close_submenu_rect.x + 11, btn_close_submenu_rect.y + 6))
+
+        if show_lamp_detail_modal and selected_lamp_index is not None:
+            lamp = lampes_editor_data[selected_lamp_index]
+            full_surface.blit(small_font.render(f"IP: {lamp.get('ip', 'N/A')}", True, (255, 255, 255)), (settings_modal_rect.x + 60, settings_modal_rect.y + 65))
+            name_rect = pg.Rect(settings_modal_rect.x + 60, settings_modal_rect.y + 90, settings_modal_rect.width - 120, 38)
+            mac_rect = pg.Rect(settings_modal_rect.x + 60, settings_modal_rect.y + 145, settings_modal_rect.width - 120, 38)
+            pg.draw.rect(full_surface, (90, 90, 120), name_rect)
+            pg.draw.rect(full_surface, (90, 120, 90), mac_rect)
+            full_surface.blit(small_font.render(f"Nom: {lamp['name']}", True, (255, 255, 255)), (name_rect.x + 10, name_rect.y + 10))
+            full_surface.blit(small_font.render(f"MAC: {lamp['mac']}", True, (255, 255, 255)), (mac_rect.x + 10, mac_rect.y + 10))
+            if show_mac_list_modal:
+                full_surface.blit(small_font.render("Choisir MAC LAN:", True, (255, 255, 255)), (settings_modal_rect.x + 60, settings_modal_rect.y + 190))
+                for i, mac in enumerate(detected_macs[:7]):
+                    r = pg.Rect(settings_modal_rect.x + 50, settings_modal_rect.y + 215 + i * 26, settings_modal_rect.width - 100, 22)
+                    color = (180, 180, 70) if mac == lamp["mac"] else (95, 95, 95)
+                    pg.draw.rect(full_surface, color, r)
+                    full_surface.blit(preview_font.render(mac, True, (0, 0, 0) if mac == lamp["mac"] else (255, 255, 255)), (r.x + 8, r.y + 4))
+        else:
+            list_x = settings_modal_rect.x + 20
+            list_y = settings_modal_rect.y + 60
+            row_h = 46
+            for i, lamp in enumerate(lampes_editor_data):
+                row = pg.Rect(list_x, list_y + i * row_h, settings_modal_rect.width - 40, 40)
+                alpha = 120 if dragging_lamp_index == i else 255
+                row_surf = pg.Surface((row.width, row.height), pg.SRCALPHA)
+                row_surf.fill((100, 100, 130, alpha))
+                full_surface.blit(row_surf, row.topleft)
+                full_surface.blit(small_font.render("⋮⋮", True, (240, 240, 240)), (row.x + 8, row.y + 8))
+                full_surface.blit(small_font.render(lamp["name"], True, (255, 255, 255)), (row.x + 34, row.y + 10))
 
     draw_popup_messages(full_surface)
 

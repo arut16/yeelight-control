@@ -1,6 +1,6 @@
 # Yeelight Touchscreen Home Automation Controller
 
-![Release 1.1](https://img.shields.io/badge/Release-1.1-blue)
+![Release 1.1.1](https://img.shields.io/badge/Release-1.1.1-blue)
 ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![Raspberry Pi 5](https://img.shields.io/badge/Raspberry%20Pi-5-C51A4A?logo=raspberrypi&logoColor=white)
 ![Yeelight LAN Mode](https://img.shields.io/badge/Yeelight-LAN%20Mode-00A86B)
@@ -72,7 +72,8 @@ Before launching on real hardware, make sure the required local JSON files, imag
 - **Astral sun condition support** for sunrise/sunset automation windows.
 - **Automation status hint on button**: when a configured automation triggers a target lamp inside an active solar window, the target lamp button shows a translucent `Auto On/Off jusqu'à HHhMM` message for 5 seconds.
 - **Lamp IP management** using local JSON files and `arp-scan` discovery.
-- **Virtual keyboard support** through `onboard` when editing lamp configuration.
+- **Integrated “Editer Lampes” touchscreen submenu** for lamp reordering and lamp metadata editing.
+- **Virtual keyboard support** through `onboard` when editing lamp names in-app.
 - **Automatic git update integration** from inside the UI.
 - **CPU temperature bubble widget** with Wi-Fi IP display and update/UPS-related UI logic.
 - **Startup and shutdown shell scripts** for Raspberry Pi operation.
@@ -148,7 +149,6 @@ Core software:
 - `arp-scan` for lamp discovery.
 - `pygame` and other Python dependencies from `requirements.txt`.
 - `onboard` virtual keyboard for touchscreen editing.
-- `mousepad` text editor for lamp configuration editing.
 - `picom` for transparent overlay behavior used by the CPU bubble helper stack.
 
 Optional helper dependencies:
@@ -174,7 +174,6 @@ sudo apt install -y \
   ffmpeg \
   arp-scan \
   onboard \
-  mousepad \
   picom \
   zenity \
   libnotify-bin
@@ -802,7 +801,7 @@ Install `onboard`:
 sudo apt install -y onboard
 ```
 
-The app launches `onboard` while editing the lamp configuration file from the settings modal.
+The app launches `onboard` while editing lamp names from the `Editer Lampes` touchscreen submenu.
 
 ### In-app git update fails
 
@@ -876,4 +875,3 @@ Built for a Raspberry Pi 5 touchscreen home automation setup using:
 - `tkinter`
 - Raspberry Pi OS
 - Yeelight smart bulbs with LAN control enabled
-

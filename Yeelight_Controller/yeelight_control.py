@@ -1271,8 +1271,6 @@ while running:
                 reload_ui_from_config()
         elif event.type == pg.MOUSEMOTION:
             pos = event.pos
-            if not is_fullscreen:
-                pos = (pos[0] + back_button_rect.x, pos[1] + back_button_rect.y)
             if show_edit_lamps_modal and dragging_lamp_index is not None:
                 list_y = settings_modal_rect.y + 60
                 row_h = 46

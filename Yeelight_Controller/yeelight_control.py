@@ -357,6 +357,12 @@ editing_lamp_name = False
 mac_list_scroll_offset = 0
 mac_list_dragging_scrollbar = False
 MAC_LIST_SCROLLBAR_WIDTH = 54
+VIRTUAL_KEYBOARD_LAYOUT = [
+    list("1234567890"),
+    list("AZERTYUIOP"),
+    list("QSDFGHJKLM"),
+    ["⌫", "W", "X", "C", "V", "B", "N", " ", ".", "-"],
+]
 show_update_modal = False
 update_files = []
 update_version = None
@@ -533,6 +539,26 @@ def get_grid_index_from_pos(pos, item_count):
     row = min(grid_rows - 1, max(0, rel_y // (card_h + gap_y)))
     idx = int(row * grid_cols + col)
     return min(item_count - 1, idx)
+
+def get_virtual_keyboard_rect():
+    return pg.Rect(0, SCREEN_HEIGHT // 2, SCREEN_WIDTH, SCREEN_HEIGHT - (SCREEN_HEIGHT // 2))
+
+def build_virtual_keyboard_keys():
+    keyboard_rect = get_virtual_keyboard_rect()
+    rows = len(VIRTUAL_KEYBOARD_LAYOUT)
+    row_height = keyboard_rect.height // rows
+    key_rects = []
+    for row_index, row in enumerate(VIRTUAL_KEYBOARD_LAYOUT):
+        key_width = keyboard_rect.width // len(row)
+        for key_index, key in enumerate(row):
+            rect = pg.Rect(
+                keyboard_rect.x + key_index * key_width + 2,
+                keyboard_rect.y + row_index * row_height + 2,
+                key_width - 4,
+                row_height - 4
+            )
+            key_rects.append((key, rect))
+    return keyboard_rect, key_rects
 
 back_button_rect = pg.Rect(0 + BUTTON_WIDTH + BUTTON_SPACING, 0 + 3 * (BUTTON_HEIGHT + BUTTON_SPACING), BUTTON_WIDTH, BUTTON_HEIGHT)
 close_button_rect = pg.Rect(SCREEN_WIDTH - CLOSE_BUTTON_SIZE - 10, SCREEN_HEIGHT - CLOSE_BUTTON_SIZE - 10, CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE)
@@ -1225,12 +1251,31 @@ while running:
                                 save_lamp_config(lampes_editor_data)
                                 show_mac_list_modal = False
                                 break
+                        if show_mac_list_modal and not list_rect.collidepoint(pos) and not scroll_rect.collidepoint(pos):
+                            show_mac_list_modal = False
                     elif show_lamp_detail_modal and selected_lamp_index is not None:
                         name_rect = pg.Rect(settings_modal_rect.x + 60, settings_modal_rect.y + 90, settings_modal_rect.width - 120, 38)
                         mac_rect = pg.Rect(settings_modal_rect.x + 60, settings_modal_rect.y + 145, settings_modal_rect.width - 120, 38)
-                        if name_rect.collidepoint(pos):
+                        keyboard_rect, key_rects = build_virtual_keyboard_keys()
+                        if editing_lamp_name:
+                            key_pressed = False
+                            for key, key_rect in key_rects:
+                                if key_rect.collidepoint(pos):
+                                    current_name = lampes_editor_data[selected_lamp_index]["name"]
+                                    if key == "⌫":
+                                        lampes_editor_data[selected_lamp_index]["name"] = current_name[:-1]
+                                    elif key == " ":
+                                        lampes_editor_data[selected_lamp_index]["name"] = current_name + " "
+                                    else:
+                                        lampes_editor_data[selected_lamp_index]["name"] = current_name + key
+                                    key_pressed = True
+                                    break
+                            if not key_pressed and not name_rect.collidepoint(pos) and not keyboard_rect.collidepoint(pos):
+                                editing_lamp_name = False
+                                save_lamp_config(lampes_editor_data)
+                                reload_ui_from_config()
+                        elif name_rect.collidepoint(pos):
                             editing_lamp_name = True
-                            launch_onboard_keyboard()
                         elif mac_rect.collidepoint(pos):
                             detected_macs = get_detected_macs() or [l["mac"] for l in lampes_editor_data if l["mac"]]
                             show_mac_list_modal = True
@@ -1587,6 +1632,15 @@ while running:
                 caret_x = min(name_rect.right - 8, name_rect.x + 10 + name_prefix_w + 2)
                 pg.draw.line(full_surface, (255, 255, 255), (caret_x, name_rect.y + 8), (caret_x, name_rect.bottom - 8), 2)
             full_surface.blit(small_font.render(f"MAC: {lamp['mac']}", True, (255, 255, 255)), (mac_rect.x + 10, mac_rect.y + 10))
+            if editing_lamp_name:
+                keyboard_rect, key_rects = build_virtual_keyboard_keys()
+                pg.draw.rect(full_surface, (35, 35, 35), keyboard_rect)
+                pg.draw.rect(full_surface, (110, 110, 110), keyboard_rect, 2)
+                for key, key_rect in key_rects:
+                    pg.draw.rect(full_surface, (90, 90, 110), key_rect, border_radius=6)
+                    key_label = "Espace" if key == " " else key
+                    key_text = small_font.render(key_label, True, (255, 255, 255))
+                    full_surface.blit(key_text, key_text.get_rect(center=key_rect.center))
             if show_mac_list_modal:
                 full_surface.blit(small_font.render("Choisir MAC LAN:", True, (255, 255, 255)), (settings_modal_rect.x + 60, settings_modal_rect.y + 190))
                 mac_list_rect = pg.Rect(settings_modal_rect.x + 50, settings_modal_rect.y + 215, settings_modal_rect.width - 100, 180)

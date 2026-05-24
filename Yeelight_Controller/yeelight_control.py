@@ -202,6 +202,22 @@ def load_lamp_ips():
 LAMP_IPS = load_lamp_ips()
 BULB_OBJECTS = {}
 
+def rename_lamp_ip_key(old_name, new_name):
+    old_key = (old_name or "").strip()
+    new_key = (new_name or "").strip()
+    if not old_key or not new_key or old_key == new_key:
+        return
+    if old_key not in LAMP_IPS:
+        return
+    if new_key in LAMP_IPS:
+        return
+    try:
+        LAMP_IPS[new_key] = LAMP_IPS.pop(old_key)
+        with open(LAMP_IPS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(LAMP_IPS, f, indent=4, ensure_ascii=False)
+    except Exception as e:
+        logging.error(f"Erreur renommage clé lamp_ips ({old_key} -> {new_key}): {e}")
+
 def load_lamp_config():
     default = {"lampes": {}}
     try:
@@ -353,6 +369,7 @@ editor_drag_last_target = None
 selected_lamp_index = None
 lampes_editor_data = build_lampes_from_config()
 detected_macs = []
+editing_lamp_original_name = ""
 editing_lamp_name = False
 mac_list_scroll_offset = 0
 mac_list_dragging_scrollbar = False
@@ -999,7 +1016,7 @@ def reset_inactivity_timer():
 
 def toggle_window_mode():
     global is_fullscreen, screen, editing_config, config_process, keyboard_process, automation_process
-    global keyboard_shift_active, keyboard_caps_lock, keyboard_last_shift_tap, mac_list_loading, mac_list_loading_thread
+    global keyboard_shift_active, keyboard_caps_lock, keyboard_last_shift_tap, mac_list_loading, mac_list_loading_thread, editing_lamp_original_name
     if is_fullscreen:
         screen = pg.display.set_mode((WINDOWED_WIDTH, WINDOWED_HEIGHT), pg.RESIZABLE)
         os.environ['SDL_VIDEO_CENTERED'] = '1'
@@ -1213,6 +1230,7 @@ while running:
             current_name = lampes_editor_data[selected_lamp_index]["name"]
             if event.key == pg.K_RETURN:
                 editing_lamp_name = False
+                rename_lamp_ip_key(editing_lamp_original_name, lampes_editor_data[selected_lamp_index]["name"])
                 save_lamp_config(lampes_editor_data)
                 reload_ui_from_config()
             elif event.key == pg.K_BACKSPACE:
@@ -1312,10 +1330,12 @@ while running:
                                     break
                             if not key_pressed and not name_rect.collidepoint(pos) and not keyboard_rect.collidepoint(pos):
                                 editing_lamp_name = False
+                                rename_lamp_ip_key(editing_lamp_original_name, lampes_editor_data[selected_lamp_index]["name"])
                                 save_lamp_config(lampes_editor_data)
                                 reload_ui_from_config()
                         elif name_rect.collidepoint(pos):
                             editing_lamp_name = True
+                            editing_lamp_original_name = lampes_editor_data[selected_lamp_index]["name"]
                             keyboard_shift_active = False
                             keyboard_caps_lock = False
                         elif mac_rect.collidepoint(pos) and not mac_list_loading:

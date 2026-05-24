@@ -321,6 +321,7 @@ show_lamp_detail_modal = False
 show_mac_list_modal = False
 dragging_lamp_index = None
 drag_mouse_offset = (0, 0)
+editor_drag_last_target = None
 selected_lamp_index = None
 lampes_editor_data = build_lampes_from_config()
 detected_macs = []
@@ -459,6 +460,42 @@ def reload_ui_from_config():
 
 boutons = {}
 reload_ui_from_config()
+
+
+def get_editor_grid_geometry():
+    grid_cols = 2
+    grid_rows = 4
+    card_w = (settings_modal_rect.width - 70) // grid_cols
+    card_h = 72
+    gap_x = 10
+    gap_y = 12
+    origin_x = settings_modal_rect.x + 20
+    origin_y = settings_modal_rect.y + 70
+    return origin_x, origin_y, card_w, card_h, gap_x, gap_y, grid_cols, grid_rows
+
+def get_editor_card_rect(index):
+    origin_x, origin_y, card_w, card_h, gap_x, gap_y, grid_cols, _ = get_editor_grid_geometry()
+    col = index % grid_cols
+    row = index // grid_cols
+    x = origin_x + col * (card_w + gap_x)
+    y = origin_y + row * (card_h + gap_y)
+    return pg.Rect(x, y, card_w, card_h)
+
+def get_grid_index_from_pos(pos, item_count):
+    if item_count <= 0:
+        return None
+    origin_x, origin_y, card_w, card_h, gap_x, gap_y, grid_cols, grid_rows = get_editor_grid_geometry()
+    total_w = grid_cols * card_w + (grid_cols - 1) * gap_x
+    total_h = grid_rows * card_h + (grid_rows - 1) * gap_y
+    grid_rect = pg.Rect(origin_x, origin_y, total_w, total_h)
+    if not grid_rect.collidepoint(pos):
+        return None
+    rel_x = pos[0] - origin_x
+    rel_y = pos[1] - origin_y
+    col = min(grid_cols - 1, max(0, rel_x // (card_w + gap_x)))
+    row = min(grid_rows - 1, max(0, rel_y // (card_h + gap_y)))
+    idx = int(row * grid_cols + col)
+    return min(item_count - 1, idx)
 
 back_button_rect = pg.Rect(0 + BUTTON_WIDTH + BUTTON_SPACING, 0 + 3 * (BUTTON_HEIGHT + BUTTON_SPACING), BUTTON_WIDTH, BUTTON_HEIGHT)
 close_button_rect = pg.Rect(SCREEN_WIDTH - CLOSE_BUTTON_SIZE - 10, SCREEN_HEIGHT - CLOSE_BUTTON_SIZE - 10, CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE)
@@ -1128,9 +1165,6 @@ while running:
                     selected_lamp_index = None
                     dragging_lamp_index = None
                 else:
-                    list_x = settings_modal_rect.x + 20
-                    list_y = settings_modal_rect.y + 60
-                    row_h = 46
                     if show_mac_list_modal and selected_lamp_index is not None:
                         mac_y_start = settings_modal_rect.y + 145
                         for i, mac in enumerate(detected_macs):
@@ -1155,13 +1189,14 @@ while running:
                             show_mac_list_modal = True
                     else:
                         for i, lamp in enumerate(lampes_editor_data):
-                            row_rect = pg.Rect(list_x, list_y + i * row_h, settings_modal_rect.width - 40, 40)
-                            drag_handle = pg.Rect(row_rect.x + 6, row_rect.y + 8, 20, 24)
+                            card_rect = get_editor_card_rect(i)
+                            drag_handle = pg.Rect(card_rect.x + 8, card_rect.y + 12, 24, 26)
                             if drag_handle.collidepoint(pos):
                                 dragging_lamp_index = i
-                                drag_mouse_offset = (pos[0] - row_rect.x, pos[1] - row_rect.y)
+                                editor_drag_last_target = i
+                                drag_mouse_offset = (pos[0] - card_rect.x, pos[1] - card_rect.y)
                                 break
-                            if row_rect.collidepoint(pos):
+                            if card_rect.collidepoint(pos):
                                 selected_lamp_index = i
                                 show_lamp_detail_modal = True
                                 show_mac_list_modal = False
@@ -1285,19 +1320,19 @@ while running:
         elif event.type == pg.MOUSEBUTTONUP:
             if dragging_lamp_index is not None:
                 dragging_lamp_index = None
-                save_lamp_config(lampes_editor_data)
-                reload_ui_from_config()
+                editor_drag_last_target = None
         elif event.type == pg.MOUSEMOTION:
             pos = event.pos
             if show_edit_lamps_modal and dragging_lamp_index is not None:
-                list_y = settings_modal_rect.y + 60
-                row_h = 46
-                y = pos[1]
-                target_index = max(0, min(len(lampes_editor_data) - 1, int((y - list_y) / row_h)))
-                if target_index != dragging_lamp_index:
+                target_index = get_grid_index_from_pos(pos, len(lampes_editor_data))
+                if target_index is not None and target_index != dragging_lamp_index:
                     item = lampes_editor_data.pop(dragging_lamp_index)
                     lampes_editor_data.insert(target_index, item)
                     dragging_lamp_index = target_index
+                    if editor_drag_last_target != target_index:
+                        editor_drag_last_target = target_index
+                        save_lamp_config(lampes_editor_data)
+                        reload_ui_from_config()
         elif event.type == pg.KEYDOWN:
             if preview_running:
                 stop_preview()
@@ -1484,17 +1519,17 @@ while running:
                     pg.draw.rect(full_surface, color, r)
                     full_surface.blit(preview_font.render(mac, True, (0, 0, 0) if mac == lamp["mac"] else (255, 255, 255)), (r.x + 8, r.y + 4))
         else:
-            list_x = settings_modal_rect.x + 20
-            list_y = settings_modal_rect.y + 60
-            row_h = 46
+            hint = preview_font.render("Glisser les poignées pour réorganiser (4 lignes x 2 colonnes)", True, (210, 210, 210))
+            full_surface.blit(hint, (settings_modal_rect.x + 20, settings_modal_rect.y + 48))
             for i, lamp in enumerate(lampes_editor_data):
-                row = pg.Rect(list_x, list_y + i * row_h, settings_modal_rect.width - 40, 40)
+                card = get_editor_card_rect(i)
                 alpha = 120 if dragging_lamp_index == i else 255
-                row_surf = pg.Surface((row.width, row.height), pg.SRCALPHA)
+                row_surf = pg.Surface((card.width, card.height), pg.SRCALPHA)
                 row_surf.fill((100, 100, 130, alpha))
-                full_surface.blit(row_surf, row.topleft)
-                full_surface.blit(small_font.render("⋮⋮", True, (240, 240, 240)), (row.x + 8, row.y + 8))
-                full_surface.blit(small_font.render(lamp["name"], True, (255, 255, 255)), (row.x + 34, row.y + 10))
+                full_surface.blit(row_surf, card.topleft)
+                full_surface.blit(small_font.render("⋮⋮", True, (240, 240, 240)), (card.x + 10, card.y + 14))
+                lamp_name = small_font.render(lamp["name"], True, (255, 255, 255))
+                full_surface.blit(lamp_name, (card.x + 40, card.y + 18))
 
     draw_popup_messages(full_surface)
 

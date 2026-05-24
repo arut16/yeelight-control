@@ -436,7 +436,13 @@ def reload_ui_from_config():
     start_y = 0
     row, col = 0, 0
     
-    for nom, ip in LAMP_IPS.items():
+    ordered_lamps = build_lampes_from_config()
+
+    for lamp in ordered_lamps:
+        nom = lamp["name"]
+        ip = lamp.get("ip")
+        if not ip:
+            continue
         x = start_x + col * (total_width_per_row)
         y = start_y + row * (BUTTON_HEIGHT + BUTTON_SPACING)
         rect = pg.Rect(x, y, BUTTON_WIDTH, BUTTON_HEIGHT)
@@ -819,7 +825,12 @@ def check_lampe_state():
     while True:
         try:
             all_lamps_offline = True
-            for nom, ip in LAMP_IPS.items():
+            ordered_lamps = build_lampes_from_config()
+            for lamp in ordered_lamps:
+                nom = lamp["name"]
+                ip = lamp.get("ip")
+                if not ip:
+                    continue
                 try:
                     bulb = get_bulb(ip)
                     props = bulb.get_properties()
@@ -1190,7 +1201,7 @@ while running:
                     else:
                         for i, lamp in enumerate(lampes_editor_data):
                             card_rect = get_editor_card_rect(i)
-                            drag_handle = pg.Rect(card_rect.x + 8, card_rect.y + 12, 24, 26)
+                            drag_handle = pg.Rect(card_rect.x + 8, card_rect.y + ((card_rect.height - 40) // 2), 34, 40)
                             if drag_handle.collidepoint(pos):
                                 dragging_lamp_index = i
                                 editor_drag_last_target = i
@@ -1527,7 +1538,10 @@ while running:
                 row_surf = pg.Surface((card.width, card.height), pg.SRCALPHA)
                 row_surf.fill((100, 100, 130, alpha))
                 full_surface.blit(row_surf, card.topleft)
-                full_surface.blit(small_font.render("⋮⋮", True, (240, 240, 240)), (card.x + 10, card.y + 14))
+                drag_zone = pg.Rect(card.x + 8, card.y + ((card.height - 40) // 2), 34, 40)
+                pg.draw.rect(full_surface, (130, 130, 155), drag_zone, border_radius=8)
+                drag_icon = small_font.render("⋮⋮", True, (240, 240, 240))
+                full_surface.blit(drag_icon, drag_icon.get_rect(center=drag_zone.center))
                 lamp_name = small_font.render(lamp["name"], True, (255, 255, 255))
                 full_surface.blit(lamp_name, (card.x + 40, card.y + 18))
 

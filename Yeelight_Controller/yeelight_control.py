@@ -327,6 +327,8 @@ selected_lamp_index = None
 lampes_editor_data = build_lampes_from_config()
 detected_macs = []
 editing_lamp_name = False
+editor_list_scroll_offset = 0
+editor_scroll_dragging = False
 show_update_modal = False
 update_files = []
 update_version = None
@@ -470,39 +472,39 @@ reload_ui_from_config()
 
 
 def get_editor_grid_geometry():
-    grid_cols = 2
-    grid_rows = 4
-    card_w = (settings_modal_rect.width - 70) // grid_cols
-    card_h = 72
-    gap_x = 10
-    gap_y = 12
+    card_w = settings_modal_rect.width - 56
+    card_h = 84
+    gap_y = 10
     origin_x = settings_modal_rect.x + 20
     origin_y = settings_modal_rect.y + 70
-    return origin_x, origin_y, card_w, card_h, gap_x, gap_y, grid_cols, grid_rows
+    viewport_h = settings_modal_rect.height - 100
+    return origin_x, origin_y, card_w, card_h, gap_y, viewport_h
+
+def get_editor_content_height(item_count):
+    origin_x, origin_y, card_w, card_h, gap_y, viewport_h = get_editor_grid_geometry()
+    return max(0, item_count * (card_h + gap_y) - gap_y)
+
+def clamp_editor_scroll(item_count):
+    global editor_list_scroll_offset
+    _, _, _, _, _, viewport_h = get_editor_grid_geometry()
+    max_scroll = max(0, get_editor_content_height(item_count) - viewport_h)
+    editor_list_scroll_offset = max(0, min(editor_list_scroll_offset, max_scroll))
 
 def get_editor_card_rect(index):
-    origin_x, origin_y, card_w, card_h, gap_x, gap_y, grid_cols, _ = get_editor_grid_geometry()
-    col = index % grid_cols
-    row = index // grid_cols
-    x = origin_x + col * (card_w + gap_x)
-    y = origin_y + row * (card_h + gap_y)
-    return pg.Rect(x, y, card_w, card_h)
+    origin_x, origin_y, card_w, card_h, gap_y, _ = get_editor_grid_geometry()
+    y = origin_y + index * (card_h + gap_y) - editor_list_scroll_offset
+    return pg.Rect(origin_x, y, card_w, card_h)
 
 def get_grid_index_from_pos(pos, item_count):
     if item_count <= 0:
         return None
-    origin_x, origin_y, card_w, card_h, gap_x, gap_y, grid_cols, grid_rows = get_editor_grid_geometry()
-    total_w = grid_cols * card_w + (grid_cols - 1) * gap_x
-    total_h = grid_rows * card_h + (grid_rows - 1) * gap_y
-    grid_rect = pg.Rect(origin_x, origin_y, total_w, total_h)
-    if not grid_rect.collidepoint(pos):
+    origin_x, origin_y, card_w, card_h, gap_y, viewport_h = get_editor_grid_geometry()
+    viewport_rect = pg.Rect(origin_x, origin_y, card_w, viewport_h)
+    if not viewport_rect.collidepoint(pos):
         return None
-    rel_x = pos[0] - origin_x
-    rel_y = pos[1] - origin_y
-    col = min(grid_cols - 1, max(0, rel_x // (card_w + gap_x)))
-    row = min(grid_rows - 1, max(0, rel_y // (card_h + gap_y)))
-    idx = int(row * grid_cols + col)
-    return min(item_count - 1, idx)
+    rel_y = pos[1] - origin_y + editor_list_scroll_offset
+    idx = int(rel_y // (card_h + gap_y))
+    return max(0, min(item_count - 1, idx))
 
 back_button_rect = pg.Rect(0 + BUTTON_WIDTH + BUTTON_SPACING, 0 + 3 * (BUTTON_HEIGHT + BUTTON_SPACING), BUTTON_WIDTH, BUTTON_HEIGHT)
 close_button_rect = pg.Rect(SCREEN_WIDTH - CLOSE_BUTTON_SIZE - 10, SCREEN_HEIGHT - CLOSE_BUTTON_SIZE - 10, CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE)
@@ -1131,6 +1133,7 @@ while running:
             current_name = lampes_editor_data[selected_lamp_index]["name"]
             if event.key == pg.K_RETURN:
                 editing_lamp_name = False
+                pg.key.stop_text_input()
                 save_lamp_config(lampes_editor_data)
                 reload_ui_from_config()
             elif event.key == pg.K_BACKSPACE:
@@ -1169,10 +1172,17 @@ while running:
                 elif no_button_rect.collidepoint(pos): show_confirm = False
             elif config_saved:
                 if config_ok_button_rect.collidepoint(pos): config_saved = False
+            elif show_edit_lamps_modal and is_fullscreen and not show_lamp_detail_modal and event.button in (4, 5):
+                _, _, _, _, _, viewport_h = get_editor_grid_geometry()
+                viewport_rect = pg.Rect(settings_modal_rect.x + 20, settings_modal_rect.y + 70, settings_modal_rect.width - 56, viewport_h)
+                if viewport_rect.collidepoint(pos):
+                    editor_list_scroll_offset += -36 if event.button == 4 else 36
+                    clamp_editor_scroll(len(lampes_editor_data))
             elif show_edit_lamps_modal and is_fullscreen:
                 if btn_close_submenu_rect.collidepoint(pos):
                     show_edit_lamps_modal = False
                     show_lamp_detail_modal = False
+                    pg.key.stop_text_input()
                     show_mac_list_modal = False
                     selected_lamp_index = None
                     dragging_lamp_index = None
@@ -1190,10 +1200,14 @@ while running:
                         name_rect = pg.Rect(settings_modal_rect.x + 60, settings_modal_rect.y + 90, settings_modal_rect.width - 120, 38)
                         mac_rect = pg.Rect(settings_modal_rect.x + 60, settings_modal_rect.y + 145, settings_modal_rect.width - 120, 38)
                         if name_rect.collidepoint(pos):
+                            editing_lamp_name = True
+                            pg.key.start_text_input()
+                            pg.key.set_text_input_rect(name_rect)
                             try:
                                 keyboard_height = SCREEN_HEIGHT // 3
+                                if keyboard_process and keyboard_process.poll() is None:
+                                    keyboard_process.terminate()
                                 keyboard_process = subprocess.Popen(['onboard', '--size', f'{SCREEN_WIDTH}x{keyboard_height}'], stderr=subprocess.DEVNULL)
-                                editing_lamp_name = True
                             except Exception:
                                 pass
                         elif mac_rect.collidepoint(pos):
@@ -1231,6 +1245,7 @@ while running:
                     show_mac_list_modal = False
                     selected_lamp_index = None
                     lampes_editor_data = build_lampes_from_config()
+                    editor_list_scroll_offset = 0
                 
                 # --- AJOUT CLIC AUTOMATISATION ---
                 elif btn_auto_rect.collidepoint(pos):
@@ -1523,7 +1538,11 @@ while running:
             mac_rect = pg.Rect(settings_modal_rect.x + 60, settings_modal_rect.y + 145, settings_modal_rect.width - 120, 38)
             pg.draw.rect(full_surface, (90, 90, 120), name_rect)
             pg.draw.rect(full_surface, (90, 120, 90), mac_rect)
-            full_surface.blit(small_font.render(f"Nom: {lamp['name']}", True, (255, 255, 255)), (name_rect.x + 10, name_rect.y + 10))
+            name_text = small_font.render(f"Nom: {lamp['name']}", True, (255, 255, 255))
+            full_surface.blit(name_text, (name_rect.x + 10, name_rect.y + 10))
+            if editing_lamp_name and (pg.time.get_ticks() // 500) % 2 == 0:
+                caret_x = name_rect.x + 14 + name_text.get_width()
+                pg.draw.line(full_surface, (255, 255, 255), (caret_x, name_rect.y + 8), (caret_x, name_rect.bottom - 8), 2)
             full_surface.blit(small_font.render(f"MAC: {lamp['mac']}", True, (255, 255, 255)), (mac_rect.x + 10, mac_rect.y + 10))
             if show_mac_list_modal:
                 full_surface.blit(small_font.render("Choisir MAC LAN:", True, (255, 255, 255)), (settings_modal_rect.x + 60, settings_modal_rect.y + 190))
@@ -1533,7 +1552,7 @@ while running:
                     pg.draw.rect(full_surface, color, r)
                     full_surface.blit(preview_font.render(mac, True, (0, 0, 0) if mac == lamp["mac"] else (255, 255, 255)), (r.x + 8, r.y + 4))
         else:
-            hint = preview_font.render("Glisser les poignées pour réorganiser (4 lignes x 2 colonnes)", True, (210, 210, 210))
+            hint = preview_font.render("Glisser les poignées pour réorganiser", True, (210, 210, 210))
             full_surface.blit(hint, (settings_modal_rect.x + 20, settings_modal_rect.y + 48))
             for i, lamp in enumerate(lampes_editor_data):
                 card = get_editor_card_rect(i)
@@ -1545,9 +1564,24 @@ while running:
                 pg.draw.rect(full_surface, (130, 130, 155), drag_zone, border_radius=8)
                 drag_icon = small_font.render("⋮⋮", True, (240, 240, 240))
                 full_surface.blit(drag_icon, drag_icon.get_rect(center=drag_zone.center))
-                lamp_name = small_font.render(lamp["name"], True, (255, 255, 255))
-                lamp_name_rect = lamp_name.get_rect(center=card.center)
-                full_surface.blit(lamp_name, lamp_name_rect)
+                line_font = pg.font.SysFont("Arial", 22, bold=True)
+                ip_value = lamp.get("ip", "N/A")
+                lamp_title = line_font.render(lamp["name"], True, (255, 255, 255))
+                lamp_meta = small_font.render(f"IP: {ip_value}", True, (220, 220, 220))
+                full_surface.blit(lamp_title, (card.x + 56, card.y + 18))
+                full_surface.blit(lamp_meta, (card.x + 56, card.y + 48))
+
+            clamp_editor_scroll(len(lampes_editor_data))
+            origin_x, origin_y, card_w, card_h, gap_y, viewport_h = get_editor_grid_geometry()
+            content_h = get_editor_content_height(len(lampes_editor_data))
+            if content_h > viewport_h:
+                track = pg.Rect(settings_modal_rect.right - 18, origin_y, 8, viewport_h)
+                pg.draw.rect(full_surface, (120, 120, 130), track, border_radius=6)
+                thumb_h = max(30, int((viewport_h / content_h) * viewport_h))
+                max_scroll = content_h - viewport_h
+                thumb_y = origin_y + int((editor_list_scroll_offset / max_scroll) * (viewport_h - thumb_h)) if max_scroll > 0 else origin_y
+                thumb = pg.Rect(track.x, thumb_y, track.width, thumb_h)
+                pg.draw.rect(full_surface, (220, 220, 230), thumb, border_radius=6)
 
             if dragging_lamp_index is not None and 0 <= dragging_lamp_index < len(lampes_editor_data):
                 dragged_lamp = lampes_editor_data[dragging_lamp_index]

@@ -357,11 +357,17 @@ editing_lamp_name = False
 mac_list_scroll_offset = 0
 mac_list_dragging_scrollbar = False
 MAC_LIST_SCROLLBAR_WIDTH = 54
+mac_list_loading = False
+mac_list_loading_thread = None
+keyboard_shift_active = False
+keyboard_caps_lock = False
+keyboard_last_shift_tap = 0
+KEYBOARD_SHIFT_DOUBLE_TAP_MS = 450
 VIRTUAL_KEYBOARD_LAYOUT = [
     list("1234567890"),
-    list("AZERTYUIOP"),
-    list("QSDFGHJKLM"),
-    ["⌫", "W", "X", "C", "V", "B", "N", " ", ".", "-"],
+    list("azertyuiop"),
+    list("qsdfghjklm"),
+    ["SHIFT", "w", "x", "c", "v", "b", "n", " ", ".", "BACKSPACE"],
 ]
 show_update_modal = False
 update_files = []
@@ -559,6 +565,25 @@ def build_virtual_keyboard_keys():
             )
             key_rects.append((key, rect))
     return keyboard_rect, key_rects
+
+
+def get_display_key_label(key):
+    if key == "SHIFT":
+        return "Maj"
+    if key == "BACKSPACE":
+        return ""
+    if key == " ":
+        return "Espace"
+    if key.isalpha():
+        return key.upper() if (keyboard_shift_active or keyboard_caps_lock) else key.lower()
+    return key
+
+
+def load_detected_macs_async():
+    global detected_macs, mac_list_loading, show_mac_list_modal
+    detected_macs = get_detected_macs() or [l["mac"] for l in lampes_editor_data if l["mac"]]
+    mac_list_loading = False
+    show_mac_list_modal = True
 
 back_button_rect = pg.Rect(0 + BUTTON_WIDTH + BUTTON_SPACING, 0 + 3 * (BUTTON_HEIGHT + BUTTON_SPACING), BUTTON_WIDTH, BUTTON_HEIGHT)
 close_button_rect = pg.Rect(SCREEN_WIDTH - CLOSE_BUTTON_SIZE - 10, SCREEN_HEIGHT - CLOSE_BUTTON_SIZE - 10, CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE)
@@ -974,6 +999,7 @@ def reset_inactivity_timer():
 
 def toggle_window_mode():
     global is_fullscreen, screen, editing_config, config_process, keyboard_process, automation_process
+    global keyboard_shift_active, keyboard_caps_lock, keyboard_last_shift_tap, mac_list_loading, mac_list_loading_thread
     if is_fullscreen:
         screen = pg.display.set_mode((WINDOWED_WIDTH, WINDOWED_HEIGHT), pg.RESIZABLE)
         os.environ['SDL_VIDEO_CENTERED'] = '1'
@@ -1262,12 +1288,26 @@ while running:
                             for key, key_rect in key_rects:
                                 if key_rect.collidepoint(pos):
                                     current_name = lampes_editor_data[selected_lamp_index]["name"]
-                                    if key == "⌫":
+                                    if key == "BACKSPACE":
                                         lampes_editor_data[selected_lamp_index]["name"] = current_name[:-1]
+                                    elif key == "SHIFT":
+                                        now = pg.time.get_ticks()
+                                        if now - keyboard_last_shift_tap <= KEYBOARD_SHIFT_DOUBLE_TAP_MS:
+                                            keyboard_caps_lock = not keyboard_caps_lock
+                                            keyboard_shift_active = False
+                                        else:
+                                            keyboard_shift_active = not keyboard_shift_active
+                                            if keyboard_shift_active:
+                                                keyboard_caps_lock = False
+                                        keyboard_last_shift_tap = now
                                     elif key == " ":
                                         lampes_editor_data[selected_lamp_index]["name"] = current_name + " "
+                                        keyboard_shift_active = False
                                     else:
-                                        lampes_editor_data[selected_lamp_index]["name"] = current_name + key
+                                        out_key = key.upper() if (keyboard_shift_active or keyboard_caps_lock) else key.lower()
+                                        lampes_editor_data[selected_lamp_index]["name"] = current_name + out_key
+                                        if keyboard_shift_active and not keyboard_caps_lock:
+                                            keyboard_shift_active = False
                                     key_pressed = True
                                     break
                             if not key_pressed and not name_rect.collidepoint(pos) and not keyboard_rect.collidepoint(pos):
@@ -1276,10 +1316,14 @@ while running:
                                 reload_ui_from_config()
                         elif name_rect.collidepoint(pos):
                             editing_lamp_name = True
-                        elif mac_rect.collidepoint(pos):
-                            detected_macs = get_detected_macs() or [l["mac"] for l in lampes_editor_data if l["mac"]]
-                            show_mac_list_modal = True
+                            keyboard_shift_active = False
+                            keyboard_caps_lock = False
+                        elif mac_rect.collidepoint(pos) and not mac_list_loading:
+                            mac_list_loading = True
+                            show_mac_list_modal = False
                             mac_list_scroll_offset = 0
+                            mac_list_loading_thread = threading.Thread(target=load_detected_macs_async, daemon=True)
+                            mac_list_loading_thread.start()
                     else:
                         for i, lamp in enumerate(lampes_editor_data):
                             card_rect = get_editor_card_rect(i)
@@ -1632,15 +1676,35 @@ while running:
                 caret_x = min(name_rect.right - 8, name_rect.x + 10 + name_prefix_w + 2)
                 pg.draw.line(full_surface, (255, 255, 255), (caret_x, name_rect.y + 8), (caret_x, name_rect.bottom - 8), 2)
             full_surface.blit(small_font.render(f"MAC: {lamp['mac']}", True, (255, 255, 255)), (mac_rect.x + 10, mac_rect.y + 10))
+            if mac_list_loading:
+                spinner_center = (mac_rect.right - 24, mac_rect.centery)
+                for i in range(8):
+                    a = (pg.time.get_ticks() / 120.0) + i * (math.pi / 4)
+                    x = int(spinner_center[0] + math.cos(a) * 9)
+                    y = int(spinner_center[1] + math.sin(a) * 9)
+                    c = 80 + int((i / 7) * 175)
+                    pg.draw.circle(full_surface, (c, c, c), (x, y), 2)
             if editing_lamp_name:
                 keyboard_rect, key_rects = build_virtual_keyboard_keys()
                 pg.draw.rect(full_surface, (35, 35, 35), keyboard_rect)
                 pg.draw.rect(full_surface, (110, 110, 110), keyboard_rect, 2)
                 for key, key_rect in key_rects:
                     pg.draw.rect(full_surface, (90, 90, 110), key_rect, border_radius=6)
-                    key_label = "Espace" if key == " " else key
-                    key_text = small_font.render(key_label, True, (255, 255, 255))
-                    full_surface.blit(key_text, key_text.get_rect(center=key_rect.center))
+                    if key == "BACKSPACE":
+                        cy = key_rect.centery
+                        left = key_rect.x + 10
+                        right = key_rect.right - 10
+                        pg.draw.line(full_surface, (255, 255, 255), (right, cy), (left + 8, cy), 3)
+                        pg.draw.polygon(full_surface, (255, 255, 255), [(left + 8, cy - 8), (left, cy), (left + 8, cy + 8)])
+                    elif key == "SHIFT":
+                        cx, cy = key_rect.center
+                        pg.draw.polygon(full_surface, (255, 255, 255), [(cx, cy - 12), (cx - 12, cy + 2), (cx - 4, cy + 2), (cx - 4, cy + 12), (cx + 4, cy + 12), (cx + 4, cy + 2), (cx + 12, cy + 2)], 2)
+                        if keyboard_caps_lock:
+                            pg.draw.circle(full_surface, (255, 255, 255), (key_rect.right - 10, key_rect.bottom - 10), 3)
+                    else:
+                        key_label = get_display_key_label(key)
+                        key_text = small_font.render(key_label, True, (255, 255, 255))
+                        full_surface.blit(key_text, key_text.get_rect(center=key_rect.center))
             if show_mac_list_modal:
                 full_surface.blit(small_font.render("Choisir MAC LAN:", True, (255, 255, 255)), (settings_modal_rect.x + 60, settings_modal_rect.y + 190))
                 mac_list_rect = pg.Rect(settings_modal_rect.x + 50, settings_modal_rect.y + 215, settings_modal_rect.width - 100, 180)

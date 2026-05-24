@@ -257,8 +257,9 @@ def launch_onboard_keyboard():
             keyboard_process.terminate()
         keyboard_height = SCREEN_HEIGHT // 3
         keyboard_process = subprocess.Popen(['onboard', '--size', f'{SCREEN_WIDTH}x{keyboard_height}'], stderr=subprocess.DEVNULL)
-        time.sleep(0.2)
-        subprocess.run(['wmctrl', '-r', 'Onboard', '-b', 'add,above'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        time.sleep(0.25)
+        subprocess.run(['wmctrl', '-r', 'Onboard', '-b', 'remove,below'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        subprocess.run(['wmctrl', '-r', 'Onboard', '-b', 'add,above,sticky'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
         subprocess.run(['wmctrl', '-a', 'Onboard'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
     except Exception:
         pass
@@ -271,7 +272,9 @@ def build_mac_list_entries(macs, lamps_data):
             "mac": mac,
             "ip": matching_lamp.get("ip", "N/A") if matching_lamp else "N/A",
             "name": matching_lamp.get("name", "Non assignée") if matching_lamp else "Non assignée",
+            "assigned": matching_lamp is not None,
         })
+    entries.sort(key=lambda e: (not e["assigned"], e["mac"]))
     return entries
 
 # --- CACHE RÈGLES (Pour ne pas lire le disque en boucle) ---
@@ -353,6 +356,7 @@ detected_macs = []
 editing_lamp_name = False
 mac_list_scroll_offset = 0
 mac_list_dragging_scrollbar = False
+MAC_LIST_SCROLLBAR_WIDTH = 54
 show_update_modal = False
 update_files = []
 update_version = None
@@ -1209,13 +1213,13 @@ while running:
                         row_height = 36
                         visible_rows = max(1, list_rect.height // row_height)
                         max_scroll = max(0, len(entries) - visible_rows)
-                        scroll_x = list_rect.right - 18
-                        scroll_rect = pg.Rect(scroll_x, list_rect.y, 18, list_rect.height)
+                        scroll_x = list_rect.right - MAC_LIST_SCROLLBAR_WIDTH
+                        scroll_rect = pg.Rect(scroll_x, list_rect.y, MAC_LIST_SCROLLBAR_WIDTH, list_rect.height)
                         if scroll_rect.collidepoint(pos) and max_scroll > 0:
                             mac_list_dragging_scrollbar = True
                         start_index = int(mac_list_scroll_offset)
                         for i, item in enumerate(entries[start_index:start_index + visible_rows]):
-                            r = pg.Rect(list_rect.x, list_rect.y + i * row_height, list_rect.width - 20, row_height - 4)
+                            r = pg.Rect(list_rect.x, list_rect.y + i * row_height, list_rect.width - MAC_LIST_SCROLLBAR_WIDTH - 2, row_height - 4)
                             if r.collidepoint(pos):
                                 lampes_editor_data[selected_lamp_index]["mac"] = item["mac"]
                                 save_lamp_config(lampes_editor_data)
@@ -1593,7 +1597,7 @@ while running:
                 mac_list_scroll_offset = min(max_scroll, max(0, int(mac_list_scroll_offset)))
                 pg.draw.rect(full_surface, (65, 65, 65), mac_list_rect)
                 for i, item in enumerate(entries[mac_list_scroll_offset:mac_list_scroll_offset + visible_rows]):
-                    r = pg.Rect(mac_list_rect.x, mac_list_rect.y + i * row_height, mac_list_rect.width - 20, row_height - 4)
+                    r = pg.Rect(mac_list_rect.x, mac_list_rect.y + i * row_height, mac_list_rect.width - MAC_LIST_SCROLLBAR_WIDTH - 2, row_height - 4)
                     color = (180, 180, 70) if item["mac"] == lamp["mac"] else (95, 95, 95)
                     pg.draw.rect(full_surface, color, r)
                     txt_color = (0, 0, 0) if item["mac"] == lamp["mac"] else (255, 255, 255)
@@ -1601,7 +1605,7 @@ while running:
                     details_label = preview_font.render(f"{item['ip']} | {item['name']}", True, txt_color)
                     full_surface.blit(mac_label, (r.x + 8, r.y + 3))
                     full_surface.blit(details_label, (r.x + 8, r.y + 20))
-                scrollbar_rect = pg.Rect(mac_list_rect.right - 18, mac_list_rect.y, 18, mac_list_rect.height)
+                scrollbar_rect = pg.Rect(mac_list_rect.right - MAC_LIST_SCROLLBAR_WIDTH, mac_list_rect.y, MAC_LIST_SCROLLBAR_WIDTH, mac_list_rect.height)
                 pg.draw.rect(full_surface, (120, 120, 120), scrollbar_rect, border_radius=8)
                 if max_scroll > 0:
                     knob_h = max(28, int(mac_list_rect.height * (visible_rows / len(entries))))

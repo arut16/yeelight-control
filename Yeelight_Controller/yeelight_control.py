@@ -321,6 +321,7 @@ show_lamp_detail_modal = False
 show_mac_list_modal = False
 dragging_lamp_index = None
 drag_mouse_offset = (0, 0)
+drag_mouse_pos = (0, 0)
 editor_drag_last_target = None
 selected_lamp_index = None
 lampes_editor_data = build_lampes_from_config()
@@ -1206,6 +1207,7 @@ while running:
                                 dragging_lamp_index = i
                                 editor_drag_last_target = i
                                 drag_mouse_offset = (pos[0] - card_rect.x, pos[1] - card_rect.y)
+                                drag_mouse_pos = pos
                                 break
                             if card_rect.collidepoint(pos):
                                 selected_lamp_index = i
@@ -1335,6 +1337,7 @@ while running:
         elif event.type == pg.MOUSEMOTION:
             pos = event.pos
             if show_edit_lamps_modal and dragging_lamp_index is not None:
+                drag_mouse_pos = pos
                 target_index = get_grid_index_from_pos(pos, len(lampes_editor_data))
                 if target_index is not None and target_index != dragging_lamp_index:
                     item = lampes_editor_data.pop(dragging_lamp_index)
@@ -1543,7 +1546,25 @@ while running:
                 drag_icon = small_font.render("⋮⋮", True, (240, 240, 240))
                 full_surface.blit(drag_icon, drag_icon.get_rect(center=drag_zone.center))
                 lamp_name = small_font.render(lamp["name"], True, (255, 255, 255))
-                full_surface.blit(lamp_name, (card.x + 40, card.y + 18))
+                lamp_name_rect = lamp_name.get_rect(center=card.center)
+                full_surface.blit(lamp_name, lamp_name_rect)
+
+            if dragging_lamp_index is not None and 0 <= dragging_lamp_index < len(lampes_editor_data):
+                dragged_lamp = lampes_editor_data[dragging_lamp_index]
+                dragged_card = get_editor_card_rect(dragging_lamp_index)
+                ghost_surface = pg.Surface((dragged_card.width, dragged_card.height), pg.SRCALPHA)
+                ghost_surface.fill((100, 100, 130, 128))
+                ghost_drag_zone = pg.Rect(8, (dragged_card.height - 40) // 2, 34, 40)
+                pg.draw.rect(ghost_surface, (130, 130, 155, 180), ghost_drag_zone, border_radius=8)
+                ghost_drag_icon = small_font.render("⋮⋮", True, (240, 240, 240))
+                ghost_surface.blit(ghost_drag_icon, ghost_drag_icon.get_rect(center=ghost_drag_zone.center))
+                ghost_name = small_font.render(dragged_lamp["name"], True, (255, 255, 255))
+                ghost_name_rect = ghost_name.get_rect(center=(dragged_card.width // 2, dragged_card.height // 2))
+                ghost_surface.blit(ghost_name, ghost_name_rect)
+                full_surface.blit(
+                    ghost_surface,
+                    (drag_mouse_pos[0] - drag_mouse_offset[0], drag_mouse_pos[1] - drag_mouse_offset[1]),
+                )
 
     draw_popup_messages(full_surface)
 

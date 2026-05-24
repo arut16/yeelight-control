@@ -1270,10 +1270,13 @@ while running:
                 save_lamp_config(lampes_editor_data)
                 reload_ui_from_config()
         elif event.type == pg.MOUSEMOTION:
+            pos = event.pos
+            if not is_fullscreen:
+                pos = (pos[0] + back_button_rect.x, pos[1] + back_button_rect.y)
             if show_edit_lamps_modal and dragging_lamp_index is not None:
                 list_y = settings_modal_rect.y + 60
                 row_h = 46
-                y = event.pos[1]
+                y = pos[1]
                 target_index = max(0, min(len(lampes_editor_data) - 1, int((y - list_y) / row_h)))
                 if target_index != dragging_lamp_index:
                     item = lampes_editor_data.pop(dragging_lamp_index)

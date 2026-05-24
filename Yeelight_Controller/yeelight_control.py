@@ -1264,6 +1264,24 @@ while running:
                     start_video_screensaver()
 
                 elif not settings_modal_rect.collidepoint(pos): show_settings_modal = False
+            else:
+                if settings_button_rect.collidepoint(pos) and is_fullscreen:
+                    show_settings_modal = True
+                elif back_button_rect.collidepoint(pos):
+                    toggle_window_mode()
+                elif close_button_rect.collidepoint(pos) and is_fullscreen:
+                    show_confirm = True
+                else:
+                    for nom, btn in boutons.items():
+                        if btn["rect"].collidepoint(pos):
+                            click_count[nom] += 1
+                            last_click_pos[nom] = pos
+                            if click_count[nom] == 1:
+                                last_click_time[nom] = current_time
+                            elif click_count[nom] == 2 and (current_time - last_click_time[nom]) < DOUBLE_CLICK_DELAY:
+                                on_button_click(nom, pos, "night")
+                                click_count[nom] = 0
+                            break
         elif event.type == pg.MOUSEBUTTONUP:
             if dragging_lamp_index is not None:
                 dragging_lamp_index = None
@@ -1280,19 +1298,6 @@ while running:
                     item = lampes_editor_data.pop(dragging_lamp_index)
                     lampes_editor_data.insert(target_index, item)
                     dragging_lamp_index = target_index
-            else:
-                if settings_button_rect.collidepoint(pos) and is_fullscreen: show_settings_modal = True
-                for nom, btn in boutons.items():
-                    if btn["rect"].collidepoint(pos):
-                        click_count[nom] += 1
-                        last_click_pos[nom] = pos
-                        if click_count[nom] == 1: last_click_time[nom] = current_time
-                        elif click_count[nom] == 2 and (current_time - last_click_time[nom]) < DOUBLE_CLICK_DELAY:
-                            on_button_click(nom, pos, "night")
-                            click_count[nom] = 0
-                        break
-                if back_button_rect.collidepoint(pos): toggle_window_mode()
-                elif close_button_rect.collidepoint(pos) and is_fullscreen: show_confirm = True
         elif event.type == pg.KEYDOWN:
             if preview_running:
                 stop_preview()

@@ -356,14 +356,29 @@ preview_running = False
 preview_start_time = 0
 
 pg.init()
-pg.mixer.init(frequency=48000, size=-16, channels=2)
-click_sound = pg.mixer.Sound(os.path.join(SOUNDS_DIR, "click.wav"))
-click_sound.set_volume(0.9)
-light_on_sound = pg.mixer.Sound(os.path.join(SOUNDS_DIR, "light_on.wav"))
-light_on_sound.set_volume(0.9)
-light_off_sound = pg.mixer.Sound(os.path.join(SOUNDS_DIR, "light_off.wav"))
-light_off_sound.set_volume(0.9)
-pg.mixer.set_num_channels(8)
+audio_enabled = True
+try:
+    pg.mixer.init(frequency=48000, size=-16, channels=2)
+    click_sound = pg.mixer.Sound(os.path.join(SOUNDS_DIR, "click.wav"))
+    click_sound.set_volume(0.9)
+    light_on_sound = pg.mixer.Sound(os.path.join(SOUNDS_DIR, "light_on.wav"))
+    light_on_sound.set_volume(0.9)
+    light_off_sound = pg.mixer.Sound(os.path.join(SOUNDS_DIR, "light_off.wav"))
+    light_off_sound.set_volume(0.9)
+    pg.mixer.set_num_channels(8)
+except Exception as e:
+    audio_enabled = False
+    click_sound = None
+    light_on_sound = None
+    light_off_sound = None
+    logging.error(f"Audio indisponible (mixer/sounds): {e}")
+
+def play_sound(sound):
+    if audio_enabled and sound is not None:
+        try:
+            sound.play()
+        except Exception as e:
+            logging.error(f"Erreur lecture son: {e}")
 
 pg.display.set_mode((1, 1))
 yeelight_taskbar_icon = pg.image.load(os.path.join(ICONS_DIR, "yeelight_logo_32x32.png")).convert_alpha()
@@ -724,13 +739,13 @@ def toggle_lampe(nom, ip):
             bulb.set_scene(SceneClass.CT, 6500, 100)
             lampe_states[nom] = "on"
             lampe_modes[nom] = "normal"
-            light_on_sound.play()
+            play_sound(light_on_sound)
             process_automation(nom, "on") # Ajout
         else:
             bulb.turn_off()
             lampe_states[nom] = "off"
             lampe_modes[nom] = "normal"
-            light_off_sound.play()
+            play_sound(light_off_sound)
             process_automation(nom, "off") # Ajout
         failure_counts[nom] = 0
         return True
@@ -747,7 +762,7 @@ def toggle_night_mode(nom, ip):
             bulb.set_scene(SceneClass.CT, 1700, 1)
             lampe_states[nom] = "on"
             lampe_modes[nom] = "night"
-            light_on_sound.play()
+            play_sound(light_on_sound)
             process_automation(nom, "on") # Ajout
         elif lampe_modes[nom] == "normal":
             bulb.set_scene(SceneClass.CT, 1700, 1)
@@ -1077,7 +1092,7 @@ while running:
         elif event.type == pg.MOUSEBUTTONDOWN:
             pos = event.pos
             if pg.time.get_ticks() - last_click_sound_time > 100:
-                click_sound.play()
+                play_sound(click_sound)
                 last_click_sound_time = pg.time.get_ticks()
             if not is_fullscreen: pos = (pos[0] + back_button_rect.x, pos[1] + back_button_rect.y)
             
@@ -1280,7 +1295,7 @@ while running:
         elif event.type == pg.KEYDOWN:
             if preview_running:
                 stop_preview()
-            elif screensaver_active: stop_screensaver(); click_sound.play()
+            elif screensaver_active: stop_screensaver(); play_sound(click_sound)
         elif event.type == pg.VIDEORESIZE and not is_fullscreen:
             WINDOWED_WIDTH, WINDOWED_HEIGHT = event.size
             screen = pg.display.set_mode((WINDOWED_WIDTH, WINDOWED_HEIGHT), pg.RESIZABLE)

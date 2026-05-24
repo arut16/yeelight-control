@@ -855,6 +855,101 @@ Potential improvements that fit the current architecture:
 - Add a settings screen for video paths and screensaver timeout.
 - Add tests for JSON parsing, automation rule evaluation, and sun-condition windows.
 
+
+---
+
+## 🗂️ Changelog complet du projet
+
+Historique chronologique de **tous les commits** depuis l’initialisation du dépôt :
+
+- 2026-05-16 — `4ad0c03` — Yeelight Control Project
+- 2026-05-16 — `43312f9` — Add project update checker
+- 2026-05-16 — `0d20a0f` — Merge pull request #1 from arut16/codex/add-update-check-button-in-settings
+- 2026-05-16 — `058923e` — Bump version to 1.0.1
+- 2026-05-16 — `5b5be01` — Merge pull request #2 from arut16/codex/colorier-bouton-verifier-mises-a-jour
+- 2026-05-16 — `1605c42` — Keep settings open when no updates are found
+- 2026-05-16 — `f45997b` — Merge pull request #3 from arut16/codex/prevent-auto-close-of-settings-window
+- 2026-05-16 — `de5b1f1` — Bump version to 1.0.3
+- 2026-05-16 — `e56cf85` — Merge pull request #4 from arut16/codex/augmenter-taille-message-mise-a-jour
+- 2026-05-16 — `0b50833` — Add requirements
+- 2026-05-16 — `5b349b6` — Add professional project README
+- 2026-05-16 — `728e47b` — Merge pull request #5 from arut16/codex/create-comprehensive-readme.md-for-project
+- 2026-05-16 — `43bd086` — Enhance README quick start and limitations
+- 2026-05-16 — `62169ed` — Merge branch 'main' into codex/create-comprehensive-readme.md-for-project-h7w4tz
+- 2026-05-16 — `ee302fb` — Merge pull request #6 from arut16/codex/create-comprehensive-readme.md-for-project-h7w4tz
+- 2026-05-16 — `a6dc2dd` — Add README screenshots
+- 2026-05-16 — `5a91cdb` — Update README screenshots section
+- 2026-05-16 — `94d4691` — Merge pull request #7 from arut16/codex/update-readme.md-with-real-screenshots
+- 2026-05-16 — `490d57d` — Add project goals and MIT license
+- 2026-05-16 — `8f18b78` — Merge pull request #8 from arut16/codex/update-readme-and-add-mit-license
+- 2026-05-16 — `01e8738` — Fix scheduled shutdown startup grace
+- 2026-05-16 — `859ebb7` — Merge pull request #9 from arut16/codex/fix-rpi-reboot-issue-and-update-version
+- 2026-05-17 — `4cc49e3` — Fix solar automation windows
+- 2026-05-17 — `316ecdc` — Merge pull request #10 from arut16/codex/corriger-le-bug-de-l-automatisation-du-coucher-du-soleil
+- 2026-05-17 — `7552e4c` — Update release badge from 1.0.4 to 1.0.5
+- 2026-05-17 — `e36a1cb` — Update release badge to version 1.0.5
+- 2026-05-18 — `40bca3d` — Generalise le hint auto a toute lampe cible
+- 2026-05-18 — `333b6c9` — Merge pull request #11 from arut16/codex/add-auto-on/off-notifications-for-bureau-david
+- 2026-05-21 — `3170c98` — Add file 'à supprimer' with placeholder content
+- 2026-05-21 — `d0c9ef7` — Add files via upload
+- 2026-05-21 — `6e2be4f` — Delete sounds/à supprimer
+- 2026-05-21 — `f2d115a` — Create à supprimer
+- 2026-05-21 — `61ad0b0` — Add files via upload
+- 2026-05-21 — `a1e5fc7` — Delete Pictures/à supprimer
+- 2026-05-21 — `a92fc14` — Create à supprimer
+- 2026-05-21 — `a4370a4` — Add placeholder video file 'lava_lamp.mp4'
+- 2026-05-21 — `5bd886c` — Create Nebula.mp4
+- 2026-05-21 — `93830f8` — Create particules_explosions.mp4
+- 2026-05-21 — `bd2cb99` — Create Turbulence.mp4
+- 2026-05-21 — `9b89322` — Delete Videos/à supprimer
+- 2026-05-22 — `3250917` — Fix LXDE autostart docs and support venv inside project folder
+- 2026-05-22 — `93e8e02` — Merge pull request #12 from arut16/codex/refactor-path-management-and-reorganize-files
+- 2026-05-22 — `23e3a26` — Create to delete
+- 2026-05-22 — `b0780d7` — Add files via upload
+- 2026-05-22 — `6f469c3` — Create to delete
+- 2026-05-22 — `4902621` — Add files via upload
+- 2026-05-22 — `b1c9402` — Add files via upload
+- 2026-05-22 — `2343c29` — Delete Yeelight Controller/Config/to delete
+- 2026-05-22 — `5d045ab` — Delete Yeelight Controller/font/to delete
+- 2026-05-22 — `4b876c2` — Rename MS Mincho.ttf to ms mincho.ttf
+- 2026-05-22 — `7c6c388` — Rename project directory to Yeelight_Controller
+- 2026-05-22 — `39766b1` — Merge pull request #13 from arut16/codex/rename-project-folder-to-yeelight_controller
+- 2026-05-22 — `9165f96` — Delete Yeelight Controller/font directory
+- 2026-05-22 — `cab596f` — Fix git updater repo cwd and remote VERSION path
+- 2026-05-22 — `d483852` — Merge pull request #14 from arut16/codex/fix-git-update-function-logic
+- 2026-05-22 — `6a9771a` — Move canonical README back to repository root
+- 2026-05-22 — `2b23000` — Merge pull request #15 from arut16/codex/fix-readme-display-on-github
+- 2026-05-24 — `1bdf521` — Bump version to 1.1.1 and update README for Editer Lampes
+- 2026-05-24 — `a6e7554` — Merge pull request #16 from arut16/codex/refactor-edit-lamps-feature-with-new-menu
+- 2026-05-24 — `a23d18b` — Fix startup crash when pygame audio init fails
+- 2026-05-24 — `0a0a08a` — Merge pull request #17 from arut16/codex/fix-pygame-window-crash-on-launch
+- 2026-05-24 — `669d04c` — Fix undefined mouse position in MOUSEMOTION handler
+- 2026-05-24 — `ef320f7` — Merge pull request #18 from arut16/codex/fix-nameerror-for-pos-variable
+- 2026-05-24 — `a8cb0da` — Fix unstable click handling after pos NameError patch
+- 2026-05-24 — `3eceb0a` — Merge pull request #19 from arut16/codex/fix-button-click-instability-after-change
+- 2026-05-24 — `06324d7` — Fix touch focus handling across active modal screens
+- 2026-05-24 — `4391e19` — Merge pull request #20 from arut16/codex/corriger-gestion-de-l-appui-sur-l-ecran
+- 2026-05-24 — `807afde` — Aligner l'éditeur de lampes sur la grille 4x2 et sauvegarder au déplacement
+- 2026-05-24 — `e7ab8eb` — Merge pull request #21 from arut16/codex/reorganize-buttons-in-edit-lamps-menu
+- 2026-05-24 — `f5359a0` — Fix lamp order sync and enlarge edit drag handles
+- 2026-05-24 — `7818ef6` — Merge pull request #22 from arut16/codex/fix-button-layout-and-drag-area
+- 2026-05-24 — `7d4b540` — Améliore le drag dans l'éditeur de lampes
+- 2026-05-24 — `07b67af` — Merge pull request #23 from arut16/codex/center-lamp-names-in-edit-lamps-menu
+- 2026-05-24 — `a80d4cd` — Améliore l'édition des lampes et la liste défilante
+- 2026-05-24 — `ccfc008` — Merge pull request #24 from arut16/codex/fix-lamp-name-editing-and-list-display
+- 2026-05-24 — `8bc239c` — Revert "Améliore l'édition des lampes et la liste défilante dans «Editer Lampes»"
+- 2026-05-24 — `634fa88` — Merge pull request #25 from arut16/revert-24-codex/fix-lamp-name-editing-and-list-display
+- 2026-05-24 — `3b7cd88` — Améliore l'édition du nom et la liste MAC dans Editer Lampes
+- 2026-05-24 — `9a16abe` — Merge pull request #26 from arut16/codex/fix-keyboard-visibility-for-lamp-name-edit
+- 2026-05-24 — `2a5dca0` — Fix lamp editor keyboard focus and MAC list ordering/scrollbar
+- 2026-05-24 — `8eea8a3` — Merge pull request #27 from arut16/codex/fix-keyboard-display-issue-in-edit-lamps
+- 2026-05-24 — `63a3fcc` — Ajoute un clavier virtuel intégré pour l'édition des lampes
+- 2026-05-24 — `ceba693` — Merge pull request #28 from arut16/codex/fix-keyboard-display-in-edit-lamps-menu
+- 2026-05-24 — `39c4082` — Améliore le clavier d'édition et le chargement MAC
+- 2026-05-24 — `302d90c` — Merge pull request #29 from arut16/codex/ajouter-gestion-lettres-majuscules-clavier
+- 2026-05-24 — `b85f0ec` — Fix lamp rename keeping IP mapping in editor
+- 2026-05-24 — `ae6ce53` — Merge pull request #30 from arut16/codex/corriger-bug-de-disponibilite-des-lampes
+
 ---
 
 ## 📄 License

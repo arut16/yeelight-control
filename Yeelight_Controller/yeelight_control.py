@@ -250,6 +250,30 @@ def get_bulb(ip):
         BULB_OBJECTS[ip] = bulb
     return bulb
 
+def launch_onboard_keyboard():
+    global keyboard_process
+    try:
+        if keyboard_process and keyboard_process.poll() is None:
+            keyboard_process.terminate()
+        keyboard_height = SCREEN_HEIGHT // 3
+        keyboard_process = subprocess.Popen(['onboard', '--size', f'{SCREEN_WIDTH}x{keyboard_height}'], stderr=subprocess.DEVNULL)
+        time.sleep(0.2)
+        subprocess.run(['wmctrl', '-r', 'Onboard', '-b', 'add,above'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        subprocess.run(['wmctrl', '-a', 'Onboard'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+    except Exception:
+        pass
+
+def build_mac_list_entries(macs, lamps_data):
+    entries = []
+    for mac in macs:
+        matching_lamp = next((l for l in lamps_data if l.get("mac", "").upper() == mac.upper()), None)
+        entries.append({
+            "mac": mac,
+            "ip": matching_lamp.get("ip", "N/A") if matching_lamp else "N/A",
+            "name": matching_lamp.get("name", "Non assignée") if matching_lamp else "Non assignée",
+        })
+    return entries
+
 # --- CACHE RÈGLES (Pour ne pas lire le disque en boucle) ---
 CACHED_RULES = []
 def reload_automation_rules():
@@ -327,6 +351,8 @@ selected_lamp_index = None
 lampes_editor_data = build_lampes_from_config()
 detected_macs = []
 editing_lamp_name = False
+mac_list_scroll_offset = 0
+mac_list_dragging_scrollbar = False
 show_update_modal = False
 update_files = []
 update_version = None
@@ -1178,11 +1204,20 @@ while running:
                     dragging_lamp_index = None
                 else:
                     if show_mac_list_modal and selected_lamp_index is not None:
-                        mac_y_start = settings_modal_rect.y + 145
-                        for i, mac in enumerate(detected_macs):
-                            r = pg.Rect(settings_modal_rect.x + 50, mac_y_start + i * 28, settings_modal_rect.width - 100, 24)
+                        entries = build_mac_list_entries(detected_macs, lampes_editor_data)
+                        list_rect = pg.Rect(settings_modal_rect.x + 50, settings_modal_rect.y + 215, settings_modal_rect.width - 100, 180)
+                        row_height = 36
+                        visible_rows = max(1, list_rect.height // row_height)
+                        max_scroll = max(0, len(entries) - visible_rows)
+                        scroll_x = list_rect.right - 18
+                        scroll_rect = pg.Rect(scroll_x, list_rect.y, 18, list_rect.height)
+                        if scroll_rect.collidepoint(pos) and max_scroll > 0:
+                            mac_list_dragging_scrollbar = True
+                        start_index = int(mac_list_scroll_offset)
+                        for i, item in enumerate(entries[start_index:start_index + visible_rows]):
+                            r = pg.Rect(list_rect.x, list_rect.y + i * row_height, list_rect.width - 20, row_height - 4)
                             if r.collidepoint(pos):
-                                lampes_editor_data[selected_lamp_index]["mac"] = mac
+                                lampes_editor_data[selected_lamp_index]["mac"] = item["mac"]
                                 save_lamp_config(lampes_editor_data)
                                 show_mac_list_modal = False
                                 break
@@ -1190,15 +1225,12 @@ while running:
                         name_rect = pg.Rect(settings_modal_rect.x + 60, settings_modal_rect.y + 90, settings_modal_rect.width - 120, 38)
                         mac_rect = pg.Rect(settings_modal_rect.x + 60, settings_modal_rect.y + 145, settings_modal_rect.width - 120, 38)
                         if name_rect.collidepoint(pos):
-                            try:
-                                keyboard_height = SCREEN_HEIGHT // 3
-                                keyboard_process = subprocess.Popen(['onboard', '--size', f'{SCREEN_WIDTH}x{keyboard_height}'], stderr=subprocess.DEVNULL)
-                                editing_lamp_name = True
-                            except Exception:
-                                pass
+                            editing_lamp_name = True
+                            launch_onboard_keyboard()
                         elif mac_rect.collidepoint(pos):
                             detected_macs = get_detected_macs() or [l["mac"] for l in lampes_editor_data if l["mac"]]
                             show_mac_list_modal = True
+                            mac_list_scroll_offset = 0
                     else:
                         for i, lamp in enumerate(lampes_editor_data):
                             card_rect = get_editor_card_rect(i)
@@ -1334,6 +1366,7 @@ while running:
             if dragging_lamp_index is not None:
                 dragging_lamp_index = None
                 editor_drag_last_target = None
+            mac_list_dragging_scrollbar = False
         elif event.type == pg.MOUSEMOTION:
             pos = event.pos
             if show_edit_lamps_modal and dragging_lamp_index is not None:
@@ -1347,6 +1380,26 @@ while running:
                         editor_drag_last_target = target_index
                         save_lamp_config(lampes_editor_data)
                         reload_ui_from_config()
+            if show_edit_lamps_modal and show_lamp_detail_modal and show_mac_list_modal and mac_list_dragging_scrollbar:
+                entries = build_mac_list_entries(detected_macs, lampes_editor_data)
+                list_rect = pg.Rect(settings_modal_rect.x + 50, settings_modal_rect.y + 215, settings_modal_rect.width - 100, 180)
+                row_height = 36
+                visible_rows = max(1, list_rect.height // row_height)
+                max_scroll = max(0, len(entries) - visible_rows)
+                if max_scroll > 0:
+                    knob_h = max(28, int(list_rect.height * (visible_rows / len(entries))))
+                    track_h = list_rect.height - knob_h
+                    rel = min(max(0, pos[1] - list_rect.y - knob_h // 2), track_h)
+                    mac_list_scroll_offset = (rel / track_h) * max_scroll if track_h > 0 else 0
+        elif event.type == pg.MOUSEWHEEL:
+            if show_edit_lamps_modal and show_lamp_detail_modal and show_mac_list_modal:
+                entries = build_mac_list_entries(detected_macs, lampes_editor_data)
+                list_rect = pg.Rect(settings_modal_rect.x + 50, settings_modal_rect.y + 215, settings_modal_rect.width - 100, 180)
+                row_height = 36
+                visible_rows = max(1, list_rect.height // row_height)
+                max_scroll = max(0, len(entries) - visible_rows)
+                if max_scroll > 0:
+                    mac_list_scroll_offset = min(max_scroll, max(0, mac_list_scroll_offset - event.y))
         elif event.type == pg.KEYDOWN:
             if preview_running:
                 stop_preview()
@@ -1523,15 +1576,42 @@ while running:
             mac_rect = pg.Rect(settings_modal_rect.x + 60, settings_modal_rect.y + 145, settings_modal_rect.width - 120, 38)
             pg.draw.rect(full_surface, (90, 90, 120), name_rect)
             pg.draw.rect(full_surface, (90, 120, 90), mac_rect)
-            full_surface.blit(small_font.render(f"Nom: {lamp['name']}", True, (255, 255, 255)), (name_rect.x + 10, name_rect.y + 10))
+            name_text = f"Nom: {lamp['name']}"
+            full_surface.blit(small_font.render(name_text, True, (255, 255, 255)), (name_rect.x + 10, name_rect.y + 10))
+            if editing_lamp_name and (pg.time.get_ticks() // 500) % 2 == 0:
+                name_prefix_w = small_font.size(name_text)[0]
+                caret_x = min(name_rect.right - 8, name_rect.x + 10 + name_prefix_w + 2)
+                pg.draw.line(full_surface, (255, 255, 255), (caret_x, name_rect.y + 8), (caret_x, name_rect.bottom - 8), 2)
             full_surface.blit(small_font.render(f"MAC: {lamp['mac']}", True, (255, 255, 255)), (mac_rect.x + 10, mac_rect.y + 10))
             if show_mac_list_modal:
                 full_surface.blit(small_font.render("Choisir MAC LAN:", True, (255, 255, 255)), (settings_modal_rect.x + 60, settings_modal_rect.y + 190))
-                for i, mac in enumerate(detected_macs[:7]):
-                    r = pg.Rect(settings_modal_rect.x + 50, settings_modal_rect.y + 215 + i * 26, settings_modal_rect.width - 100, 22)
-                    color = (180, 180, 70) if mac == lamp["mac"] else (95, 95, 95)
+                mac_list_rect = pg.Rect(settings_modal_rect.x + 50, settings_modal_rect.y + 215, settings_modal_rect.width - 100, 180)
+                row_height = 36
+                entries = build_mac_list_entries(detected_macs, lampes_editor_data)
+                visible_rows = max(1, mac_list_rect.height // row_height)
+                max_scroll = max(0, len(entries) - visible_rows)
+                mac_list_scroll_offset = min(max_scroll, max(0, int(mac_list_scroll_offset)))
+                pg.draw.rect(full_surface, (65, 65, 65), mac_list_rect)
+                for i, item in enumerate(entries[mac_list_scroll_offset:mac_list_scroll_offset + visible_rows]):
+                    r = pg.Rect(mac_list_rect.x, mac_list_rect.y + i * row_height, mac_list_rect.width - 20, row_height - 4)
+                    color = (180, 180, 70) if item["mac"] == lamp["mac"] else (95, 95, 95)
                     pg.draw.rect(full_surface, color, r)
-                    full_surface.blit(preview_font.render(mac, True, (0, 0, 0) if mac == lamp["mac"] else (255, 255, 255)), (r.x + 8, r.y + 4))
+                    txt_color = (0, 0, 0) if item["mac"] == lamp["mac"] else (255, 255, 255)
+                    mac_label = small_font.render(item["mac"], True, txt_color)
+                    details_label = preview_font.render(f"{item['ip']} | {item['name']}", True, txt_color)
+                    full_surface.blit(mac_label, (r.x + 8, r.y + 3))
+                    full_surface.blit(details_label, (r.x + 8, r.y + 20))
+                scrollbar_rect = pg.Rect(mac_list_rect.right - 18, mac_list_rect.y, 18, mac_list_rect.height)
+                pg.draw.rect(full_surface, (120, 120, 120), scrollbar_rect, border_radius=8)
+                if max_scroll > 0:
+                    knob_h = max(28, int(mac_list_rect.height * (visible_rows / len(entries))))
+                    track_h = mac_list_rect.height - knob_h
+                    knob_y = mac_list_rect.y + int((mac_list_scroll_offset / max_scroll) * track_h)
+                else:
+                    knob_h = mac_list_rect.height
+                    knob_y = mac_list_rect.y
+                knob_rect = pg.Rect(scrollbar_rect.x + 2, knob_y + 2, scrollbar_rect.width - 4, knob_h - 4)
+                pg.draw.rect(full_surface, (220, 220, 220), knob_rect, border_radius=8)
         else:
             hint = preview_font.render("Glisser les poignées pour réorganiser (4 lignes x 2 colonnes)", True, (210, 210, 210))
             full_surface.blit(hint, (settings_modal_rect.x + 20, settings_modal_rect.y + 48))

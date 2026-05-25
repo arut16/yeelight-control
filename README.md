@@ -13,8 +13,8 @@ The controller operates Yeelight bulbs directly on the local network through the
 
 > **Target environment:** Raspberry Pi 5 + Raspberry Pi OS desktop session + touchscreen display.
 
-> [!WARNING]
-> Many runtime paths are currently hardcoded under `~/Yeelight_Controller/`. Deployments on another username, home directory, or installation path require updating the scripts and local configuration paths accordingly before running the application.
+> [!NOTE]
+> Les chemins runtime sont maintenant majoritairement résolus dynamiquement depuis le dossier du script. Vérifiez surtout la présence des assets locaux (`Config/`, `Videos/`, `sounds/`, `Icons/`) et du venv `YeelightDomEnv/`.
 
 ---
 
@@ -37,11 +37,12 @@ A minimal local setup workflow for a Raspberry Pi OS desktop session:
 ```bash
 git clone <your-repository-url> yeelight-control
 cd yeelight-control
-python3 -m venv ~/Yeelight_Controller/YeelightDomEnv
-source ~/Yeelight_Controller/YeelightDomEnv/bin/activate
+cd Yeelight_Controller
+python3 -m venv YeelightDomEnv
+source YeelightDomEnv/bin/activate
 pip install -r requirements.txt
 export DISPLAY=:0
-python3 yeelight_control.py
+./start_yeelight_control.sh
 ```
 
 Before launching on real hardware, make sure the required local JSON files, image assets, sound assets, font file, and video files described below exist at the expected paths or update the scripts for your installation.
@@ -179,12 +180,13 @@ sudo apt install -y \
   libnotify-bin
 ```
 
-Clone the repository. The current scripts are optimized for the production path `~/Yeelight_Controller`; if you use a different user or path, update the hardcoded paths in the Python and shell scripts accordingly.
+Clone the repository from your home directory. The launcher and runtime scripts now resolve paths primarily from their own location in `Yeelight_Controller/`, which simplifies deployment on another username or base path.
 
 ```bash
-cd ~/Yeelight_Controller
+cd ~
 git clone <your-repository-url> yeelight-control
 cd yeelight-control
+cd Yeelight_Controller
 ```
 
 For the existing production-style path layout, scripts may also be placed directly in `~/Yeelight_Controller`. The startup script detects whether the application is in `~/Yeelight_Controller` and falls back to the directory containing the script when needed.
@@ -196,14 +198,14 @@ For the existing production-style path layout, scripts may also be placed direct
 The application currently expects the production virtual environment at:
 
 ```text
-~/Yeelight_Controller/YeelightDomEnv
+~/yeelight-control/Yeelight_Controller/YeelightDomEnv
 ```
 
 Create it with:
 
 ```bash
-python3 -m venv ~/Yeelight_Controller/YeelightDomEnv
-source ~/Yeelight_Controller/YeelightDomEnv/bin/activate
+python3 -m venv ~/yeelight-control/Yeelight_Controller/YeelightDomEnv
+source ~/yeelight-control/Yeelight_Controller/YeelightDomEnv/bin/activate
 python -m pip install --upgrade pip setuptools wheel
 ```
 
@@ -219,8 +221,8 @@ If you choose another virtual environment path, update:
 Install the Python dependencies from the repository:
 
 ```bash
-source ~/Yeelight_Controller/YeelightDomEnv/bin/activate
-cd ~/Yeelight_Controller/yeelight-control
+source ~/yeelight-control/Yeelight_Controller/YeelightDomEnv/bin/activate
+cd ~/yeelight-control/Yeelight_Controller
 pip install -r requirements.txt
 ```
 
@@ -255,6 +257,9 @@ Configured production video paths:
 
 Create the directory and copy your videos:
 
+> [!IMPORTANT]
+> Les vidéos réelles (fichiers volumineux) doivent être copiées localement dans `Yeelight_Controller/Videos/`. Ce dossier est ignoré par Git et n'est pas versionné.
+
 ```bash
 mkdir -p ~/Yeelight_Controller/Videos
 # Copy the required video files into ~/Yeelight_Controller/Videos
@@ -268,12 +273,15 @@ Several local files and assets are referenced by absolute production paths. Ensu
 
 ### JSON configuration files
 
+> [!IMPORTANT]
+> Les fichiers JSON de configuration locale doivent être présents dans `Yeelight_Controller/Config/` avant le premier lancement.
+
 ```text
-~/Yeelight_Controller/lamp_ips.json
-~/Yeelight_Controller/lamp_config.json
-~/Yeelight_Controller/screensavers_set.json
-~/Yeelight_Controller/automations.json
-~/Yeelight_Controller/ups_shutdown_config.json
+~/Yeelight_Controller/Config/lamp_ips.json
+~/Yeelight_Controller/Config/lamp_config.json
+~/Yeelight_Controller/Config/screensavers_set.json
+~/Yeelight_Controller/Config/automations.json
+~/Yeelight_Controller/Config/ups_shutdown_config.json
 ```
 
 ### Image assets
@@ -312,26 +320,24 @@ The Matrix screensaver uses this font to render Katakana-style symbols.
 From a Raspberry Pi desktop session:
 
 ```bash
-export DISPLAY=:0
-source ~/Yeelight_Controller/YeelightDomEnv/bin/activate
-cd ~/Yeelight_Controller/yeelight-control
-python3 yeelight_control.py
+cd ~/yeelight-control/Yeelight_Controller
+./start_yeelight_control.sh
+```
+
+Ou en lancement direct Python :
+
+```bash
+cd ~/yeelight-control/Yeelight_Controller
+YeelightDomEnv/bin/python3 -u yeelight_control.py
 ```
 
 To start the CPU temperature bubble separately:
 
 ```bash
 export DISPLAY=:0
-source ~/Yeelight_Controller/YeelightDomEnv/bin/activate
-cd ~/Yeelight_Controller/yeelight-control
+source ~/yeelight-control/Yeelight_Controller/YeelightDomEnv/bin/activate
+cd ~/yeelight-control/Yeelight_Controller
 python3 cpu_temp_bubble.py
-```
-
-Or use the provided launcher:
-
-```bash
-chmod +x start_yeelight_control.sh
-./start_yeelight_control.sh
 ```
 
 The launcher waits for the LXDE session, starts `yeelight_control.py`, then starts `cpu_temp_bubble.py` if they are not already running.
@@ -339,6 +345,8 @@ The launcher waits for the LXDE session, starts `yeelight_control.py`, then star
 ---
 
 ## 🔁 Launch Automatically at Startup
+
+The Git repository root is `yeelight-control/`, and the runnable application folder is `Yeelight_Controller/`.
 
 The repository includes `start_yeelight_control.sh`, which is intended to be called after the Raspberry Pi desktop session has started.
 
@@ -352,19 +360,37 @@ sudo nano /etc/xdg/lxsession/LXDE-pi/autostart
 Add:
 
 ```text
-@"/home/arut16/Yeelight_Controller/start_yeelight_control.sh"
+@/home/arut16/Yeelight_Controller/start_yeelight_control.sh
 ```
 
 Make the script executable:
 
 ```bash
-chmod +x "/home/arut16/Yeelight_Controller/start_yeelight_control.sh"
+chmod +x /home/arut16/Yeelight_Controller/start_yeelight_control.sh
 ```
 
 Reboot to test:
 
 ```bash
 sudo reboot
+```
+
+
+### Raccourci bureau `.desktop`
+
+Utilisez les chemins suivants dans votre fichier `.desktop` :
+
+```ini
+Exec=/bin/bash /home/arut16/Yeelight_Controller/start_yeelight_control.sh
+Icon=/home/arut16/Yeelight_Controller/Icons/yeelight_logo.png
+```
+
+### `sd-watchdog.service`
+
+Pour un service systemd dédié au watchdog SD :
+
+```ini
+ExecStart=/home/arut16/Yeelight_Controller/YeelightDomEnv/bin/python3 -u /home/arut16/Yeelight_Controller/sd_watchdog.py
 ```
 
 Startup logs are written to:
@@ -396,7 +422,7 @@ The main application includes an automatic git update workflow in the settings m
 
 How it works:
 
-1. The app reads the local project version from `VERSION`.
+1. The app reads the local project version from `Yeelight_Controller/VERSION`.
 2. The settings modal shows the current version.
 3. The **Vérifier mises à jour** button runs git commands in the project directory.
 4. The app fetches the upstream branch and lists files changed between `HEAD` and the upstream ref.
@@ -406,7 +432,7 @@ How it works:
 Manual equivalent:
 
 ```bash
-cd ~/Yeelight_Controller/yeelight-control
+cd ~/yeelight-control/Yeelight_Controller
 git fetch --prune
 git status
 git pull --ff-only
@@ -590,7 +616,7 @@ Stores automation rules created by the automation editor.
 Repository path:
 
 ```text
-VERSION
+Yeelight_Controller/VERSION
 ```
 
 Displayed in the settings modal and used by the git update workflow when comparing with the upstream version file.
@@ -663,7 +689,7 @@ tail -f ~/Yeelight_Controller/cpu_temp_bubble.log
 └───────────────────────────┘
 ```
 
-The architecture currently favors a direct Raspberry Pi deployment layout with local scripts, local JSON files, and hardcoded production paths. A future centralized configuration layer could make these paths easier to override per installation.
+The architecture favors a direct Raspberry Pi deployment layout with local scripts and local JSON files under `Yeelight_Controller/`.
 
 ---
 
@@ -672,16 +698,22 @@ The architecture currently favors a direct Raspberry Pi deployment layout with l
 ```text
 .
 ├── README.md
-├── VERSION
-├── automatisations.py      # Touchscreen automation editor
-├── bubble_helper.py            # PyQt5 speech-bubble overlay helper
-├── cpu_temp_bubble.py          # CPU temperature / IP / update / UPS bubble widget
-├── requirements.txt            # Python dependency pins
-├── sd_watchdog.py              # microSD/MMC kernel error alert helper
-├── shutdown_script.sh          # Stops app processes and powers off the Pi
-├── start_yeelight_control.sh   # Desktop-session startup launcher
-├── update_lamp_ips.py          # arp-scan-based Yeelight IP updater
-└── yeelight_control.py         # Main pygame Yeelight touchscreen controller
+├── Yeelight_Controller/
+    ├── VERSION
+    ├── automatisations.py          # Touchscreen automation editor
+    ├── bubble_helper.py            # PyQt5 speech-bubble overlay helper
+    ├── cpu_temp_bubble.py          # CPU temperature / IP / update / UPS bubble widget
+    ├── requirements.txt            # Python dependency pins
+    ├── sd_watchdog.py              # microSD/MMC kernel error alert helper
+    ├── shutdown_script.sh          # Stops app processes and powers off the Pi
+    ├── start_yeelight_control.sh   # Desktop-session startup launcher
+    ├── update_lamp_ips.py          # arp-scan-based Yeelight IP updater
+    ├── yeelight_control.py         # Main pygame Yeelight touchscreen controller
+    ├── Config/                     # JSON de configuration locale
+    ├── Icons/                      # Icônes UI
+    ├── sounds/                     # Sons UI
+    ├── Logs/                       # Logs runtime
+    └── Videos/                     # Vidéos locales non versionnées (à copier localement)
 ```
 
 ---
@@ -728,8 +760,8 @@ cat ~/Yeelight_Controller/lamp_ips.json
 Refresh lamp IPs:
 
 ```bash
-cd ~/Yeelight_Controller/yeelight-control
-source ~/Yeelight_Controller/YeelightDomEnv/bin/activate
+cd ~/yeelight-control/Yeelight_Controller
+source ~/yeelight-control/Yeelight_Controller/YeelightDomEnv/bin/activate
 python3 update_lamp_ips.py
 ```
 
@@ -808,7 +840,7 @@ The app launches `onboard` while editing lamp names from the `Editer Lampes` tou
 Check repository status and upstream configuration:
 
 ```bash
-cd ~/Yeelight_Controller/yeelight-control
+cd ~/yeelight-control/Yeelight_Controller
 git status
 git remote -v
 git branch -vv
@@ -831,7 +863,7 @@ Make sure those commands are valid for your Raspberry Pi OS networking setup. Ne
 
 ## ⚠️ Known Limitations
 
-- Many paths are hardcoded under `~/Yeelight_Controller/`, which requires manual updates for other users or installation directories.
+- Le dépôt Git est à la racine, avec `Yeelight_Controller/` comme sous-dossier applicatif; vérifiez vos chemins d'installation si vous déployez ailleurs.
 - The UI is optimized mainly for 640×480 Raspberry Pi touchscreen usage.
 - There is no authentication layer; the controller is intended for trusted local touchscreen access.
 - The application is designed for LAN environments only and expects Yeelight bulbs to be reachable locally.
